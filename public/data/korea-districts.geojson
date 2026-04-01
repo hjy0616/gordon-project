@@ -1,0 +1,80 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "id": "gangnam", "name_ko": "강남구", "name_en": "Gangnam-gu", "tier": "HIGHEST" },
+      "geometry": { "type": "Polygon", "coordinates": [[[127.017, 37.484], [127.077, 37.484], [127.077, 37.512], [127.017, 37.512], [127.017, 37.484]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "seocho", "name_ko": "서초구", "name_en": "Seocho-gu", "tier": "HIGHEST" },
+      "geometry": { "type": "Polygon", "coordinates": [[[126.978, 37.465], [127.038, 37.465], [127.038, 37.498], [126.978, 37.498], [126.978, 37.465]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "songpa", "name_ko": "송파구", "name_en": "Songpa-gu", "tier": "HIGHEST" },
+      "geometry": { "type": "Polygon", "coordinates": [[[127.075, 37.490], [127.135, 37.490], [127.135, 37.520], [127.075, 37.520], [127.075, 37.490]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "yongsan", "name_ko": "용산구", "name_en": "Yongsan-gu", "tier": "HIGH" },
+      "geometry": { "type": "Polygon", "coordinates": [[[126.958, 37.518], [127.008, 37.518], [127.008, 37.548], [126.958, 37.548], [126.958, 37.518]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "mapo", "name_ko": "마포구", "name_en": "Mapo-gu", "tier": "HIGH" },
+      "geometry": { "type": "Polygon", "coordinates": [[[126.875, 37.538], [126.935, 37.538], [126.935, 37.570], [126.875, 37.570], [126.875, 37.538]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "seongdong", "name_ko": "성동구", "name_en": "Seongdong-gu", "tier": "HIGH" },
+      "geometry": { "type": "Polygon", "coordinates": [[[127.012, 37.533], [127.062, 37.533], [127.062, 37.563], [127.012, 37.563], [127.012, 37.533]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "pangyo", "name_ko": "판교", "name_en": "Pangyo", "tier": "HIGH" },
+      "geometry": { "type": "Polygon", "coordinates": [[[127.082, 37.374], [127.132, 37.374], [127.132, 37.406], [127.082, 37.406], [127.082, 37.374]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "gwanggyo", "name_ko": "광교", "name_en": "Gwanggyo", "tier": "HIGH" },
+      "geometry": { "type": "Polygon", "coordinates": [[[127.020, 37.268], [127.072, 37.268], [127.072, 37.304], [127.020, 37.304], [127.020, 37.268]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "songdo", "name_ko": "송도", "name_en": "Songdo", "tier": "HIGH" },
+      "geometry": { "type": "Polygon", "coordinates": [[[126.625, 37.362], [126.685, 37.362], [126.685, 37.400], [126.625, 37.400], [126.625, 37.362]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "sejong", "name_ko": "세종", "name_en": "Sejong City", "tier": "HIGH" },
+      "geometry": { "type": "Polygon", "coordinates": [[[126.968, 36.460], [127.032, 36.460], [127.032, 36.500], [126.968, 36.500], [126.968, 36.460]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "centum", "name_ko": "센텀시티", "name_en": "Centum City", "tier": "MEDIUM" },
+      "geometry": { "type": "Polygon", "coordinates": [[[129.110, 35.155], [129.150, 35.155], [129.150, 35.185], [129.110, 35.185], [129.110, 35.155]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "haeundae", "name_ko": "해운대구", "name_en": "Haeundae-gu", "tier": "MEDIUM" },
+      "geometry": { "type": "Polygon", "coordinates": [[[129.140, 35.148], [129.195, 35.148], [129.195, 35.180], [129.140, 35.180], [129.140, 35.148]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "busan_dong", "name_ko": "동구", "name_en": "Dong-gu", "tier": "MEDIUM" },
+      "geometry": { "type": "Polygon", "coordinates": [[[129.030, 35.120], [129.065, 35.120], [129.065, 35.145], [129.030, 35.145], [129.030, 35.120]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "yuseong", "name_ko": "유성구", "name_en": "Yuseong-gu", "tier": "MODERATE" },
+      "geometry": { "type": "Polygon", "coordinates": [[[127.310, 36.340], [127.370, 36.340], [127.370, 36.380], [127.310, 36.380], [127.310, 36.340]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "ulsan_nam", "name_ko": "남구", "name_en": "Nam-gu", "tier": "MODERATE" },
+      "geometry": { "type": "Polygon", "coordinates": [[[129.295, 35.525], [129.355, 35.525], [129.355, 35.560], [129.295, 35.560], [129.295, 35.525]]] }
+    }
+  ]
+}
