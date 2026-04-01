@@ -41,7 +41,7 @@ const projects: Project[] = [
     description:
       "Core blockchain development and operation — custom chain architecture, consensus, and network infrastructure.",
     tags: ["Go", "Blockchain", "Core Development"],
-    href: "#",
+    href: "https://scan.zenanet.io/",
   },
 ];
 
