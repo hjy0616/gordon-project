@@ -61,15 +61,14 @@ export default function RegisterPage() {
       redirect: false,
     });
 
-    setLoading(false);
-
     if (result?.error) {
       setError("가입은 완료되었지만 로그인에 실패했습니다. 로그인 페이지에서 다시 시도해주세요.");
+      setLoading(false);
       return;
     }
 
-    router.push("/dashboard");
     router.refresh();
+    router.push("/dashboard");
   }
 
   return (
