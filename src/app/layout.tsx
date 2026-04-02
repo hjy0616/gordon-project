@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { SessionProvider } from "next-auth/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -45,9 +46,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
+          <SessionProvider>
+            <TooltipProvider>
+              {children}
+            </TooltipProvider>
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>

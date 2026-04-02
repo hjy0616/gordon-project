@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { MapLoading } from "@/components/macro-map/map-loading";
+import { useMacroMapSync } from "@/lib/hooks/use-macro-map-sync";
 
 const MacroMapView = dynamic(
   () =>
@@ -12,5 +13,6 @@ const MacroMapView = dynamic(
 );
 
 export default function MacroMapPage() {
+  useMacroMapSync();
   return <MacroMapView />;
 }

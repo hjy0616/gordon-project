@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type {
   MainTabType,
   RightsSubTabType,
@@ -16,6 +15,7 @@ import {
   DEFAULT_HAAS_SCORES,
 } from "@/types/treasure-map";
 import { DISTRICT_MAP } from "@/data/mock-korean-districts";
+import { syncToServer } from "@/lib/api-sync";
 
 type RadarKey =
   | "iotDensity"
@@ -39,7 +39,7 @@ interface TreasureMapState {
   deletedMockIds: string[];
   panelMode: PanelMode;
 
-  // Create draft (ephemeral, not persisted)
+  // Create draft (ephemeral)
   createDraft: {
     lat: number;
     lng: number;
@@ -56,7 +56,6 @@ interface TreasureMapActions {
   setAdoptionRate: (rate: number) => void;
   updateDistrictNote: (districtId: string, note: string) => void;
 
-  // Per-district edit actions
   updateDistrictHaaSScore: (
     districtId: string,
     key: HaaSCriterionKey,
@@ -79,7 +78,6 @@ interface TreasureMapActions {
   ) => void;
   resetDistrictEdits: (districtId: string) => void;
 
-  // CRUD actions
   addCustomDistrict: (
     district: Omit<CustomDistrict, "id" | "isCustom">,
   ) => void;
@@ -95,10 +93,7 @@ interface TreasureMapActions {
   restoreMockDistrict: (id: string) => void;
   resetAllToDefaults: () => void;
 
-  // UI
   setPanelMode: (mode: PanelMode) => void;
-
-  // Create draft
   setCreateDraft: (draft: {
     lat: number;
     lng: number;
@@ -122,194 +117,243 @@ function updateEdits(
   };
 }
 
+function syncDistrictEdits(districtId: string) {
+  const state = useTreasureMapStore.getState();
+  const edit = state.districtEdits[districtId];
+  if (edit) {
+    syncToServer("/api/treasure-map/edits", "PUT", {
+      districtId,
+      ...edit,
+    });
+  }
+}
+
 export const useTreasureMapStore = create<
   TreasureMapState & TreasureMapActions
 >()(
-  persist(
-    (set) => ({
-      selectedDistrict: null,
-      hoveredDistrict: null,
-      activeMainTab: "overview",
-      activeRightsSubTab: "usage",
-      adoptionRate: 50,
-      districtNotes: {},
-      districtEdits: {},
+  (set) => ({
+    selectedDistrict: null,
+    hoveredDistrict: null,
+    activeMainTab: "overview",
+    activeRightsSubTab: "usage",
+    adoptionRate: 50,
+    districtNotes: {},
+    districtEdits: {},
 
-      // CRUD state
-      customDistricts: [],
-      districtOverrides: {},
-      deletedMockIds: [],
-      panelMode: "list",
-      createDraft: null,
+    customDistricts: [],
+    districtOverrides: {},
+    deletedMockIds: [],
+    panelMode: "list",
+    createDraft: null,
 
-      selectDistrict: (id) =>
-        set({ selectedDistrict: id, panelMode: id ? "view" : "list" }),
-      setHoveredDistrict: (id) => set({ hoveredDistrict: id }),
-      setMainTab: (tab) => set({ activeMainTab: tab }),
-      setRightsSubTab: (tab) => set({ activeRightsSubTab: tab }),
-      setAdoptionRate: (rate) => set({ adoptionRate: rate }),
+    selectDistrict: (id) =>
+      set({ selectedDistrict: id, panelMode: id ? "view" : "list" }),
+    setHoveredDistrict: (id) => set({ hoveredDistrict: id }),
+    setMainTab: (tab) => set({ activeMainTab: tab }),
+    setRightsSubTab: (tab) => set({ activeRightsSubTab: tab }),
 
-      updateDistrictNote: (districtId, note) =>
-        set((state) => ({
-          districtNotes: { ...state.districtNotes, [districtId]: note },
+    setAdoptionRate: (rate) => {
+      set({ adoptionRate: rate });
+      syncToServer("/api/treasure-map/preferences", "PUT", {
+        adoptionRate: rate,
+      });
+    },
+
+    updateDistrictNote: (districtId, note) => {
+      set((state) => ({
+        districtNotes: { ...state.districtNotes, [districtId]: note },
+      }));
+      syncToServer("/api/treasure-map/notes", "PUT", { districtId, note });
+    },
+
+    updateDistrictHaaSScore: (districtId, key, value) => {
+      set((state) =>
+        updateEdits(state, districtId, (prev) => ({
+          ...prev,
+          haasScores: { ...prev.haasScores, [key]: value },
         })),
+      );
+      syncDistrictEdits(districtId);
+    },
 
-      updateDistrictHaaSScore: (districtId, key, value) =>
-        set((state) =>
-          updateEdits(state, districtId, (prev) => ({
-            ...prev,
-            haasScores: { ...prev.haasScores, [key]: value },
-          })),
-        ),
-
-      updateDistrictRadarScore: (districtId, key, value) =>
-        set((state) =>
-          updateEdits(state, districtId, (prev) => ({
-            ...prev,
-            radarScores: { ...prev.radarScores, [key]: value },
-          })),
-        ),
-
-      updateDistrictUsageInput: (districtId, field, value) =>
-        set((state) =>
-          updateEdits(state, districtId, (prev) => ({
-            ...prev,
-            usageSimInputs: {
-              ...(prev.usageSimInputs ?? {
-                jeonseDeposit: 0,
-                wolseMonthly: 0,
-                haasSubscription: 0,
-              }),
-              [field]: value,
-            },
-          })),
-        ),
-
-      updateDistrictRevenueInput: (districtId, field, value) =>
-        set((state) =>
-          updateEdits(state, districtId, (prev) => ({
-            ...prev,
-            revenueInputs: {
-              ...(prev.revenueInputs ?? {
-                holdingYears: 10,
-                tokenRatio: 40,
-                annualAppreciation: 5,
-              }),
-              [field]: value,
-            },
-          })),
-        ),
-
-      resetDistrictEdits: (districtId) =>
-        set((state) => {
-          const next = { ...state.districtEdits };
-          delete next[districtId];
-          return { districtEdits: next };
-        }),
-
-      // ── CRUD actions ──
-
-      addCustomDistrict: (district) =>
-        set((state) => {
-          const id = crypto.randomUUID();
-          const newDistrict: CustomDistrict = {
-            ...district,
-            id,
-            isCustom: true,
-            criteria: district.criteria ?? DEFAULT_CRITERIA,
-            rightsData: district.rightsData ?? DEFAULT_RIGHTS_DATA,
-            haasScores: district.haasScores ?? DEFAULT_HAAS_SCORES,
-          };
-          return {
-            customDistricts: [...state.customDistricts, newDistrict],
-            selectedDistrict: id,
-            panelMode: "view",
-          };
-        }),
-
-      updateCustomDistrict: (id, updates) =>
-        set((state) => ({
-          customDistricts: state.customDistricts.map((d) =>
-            d.id === id ? { ...d, ...updates } : d,
-          ),
+    updateDistrictRadarScore: (districtId, key, value) => {
+      set((state) =>
+        updateEdits(state, districtId, (prev) => ({
+          ...prev,
+          radarScores: { ...prev.radarScores, [key]: value },
         })),
+      );
+      syncDistrictEdits(districtId);
+    },
 
-      deleteDistrict: (id) =>
-        set((state) => {
-          const isCustom = state.customDistricts.some((d) => d.id === id);
-          if (isCustom) {
-            return {
-              customDistricts: state.customDistricts.filter(
-                (d) => d.id !== id,
-              ),
-              selectedDistrict:
-                state.selectedDistrict === id
-                  ? null
-                  : state.selectedDistrict,
-              panelMode:
-                state.selectedDistrict === id ? "list" : state.panelMode,
-            };
-          }
-          // Mock district: soft-delete
-          if (DISTRICT_MAP.has(id)) {
-            return {
-              deletedMockIds: [...state.deletedMockIds, id],
-              selectedDistrict:
-                state.selectedDistrict === id
-                  ? null
-                  : state.selectedDistrict,
-              panelMode:
-                state.selectedDistrict === id ? "list" : state.panelMode,
-            };
-          }
-          return {};
-        }),
-
-      updateMockOverride: (id, overrides) =>
-        set((state) => ({
-          districtOverrides: {
-            ...state.districtOverrides,
-            [id]: { ...state.districtOverrides[id], ...overrides },
+    updateDistrictUsageInput: (districtId, field, value) => {
+      set((state) =>
+        updateEdits(state, districtId, (prev) => ({
+          ...prev,
+          usageSimInputs: {
+            ...(prev.usageSimInputs ?? {
+              jeonseDeposit: 0,
+              wolseMonthly: 0,
+              haasSubscription: 0,
+            }),
+            [field]: value,
           },
         })),
-
-      restoreMockDistrict: (id) =>
-        set((state) => {
-          const nextOverrides = { ...state.districtOverrides };
-          delete nextOverrides[id];
-          return {
-            deletedMockIds: state.deletedMockIds.filter((mid) => mid !== id),
-            districtOverrides: nextOverrides,
-          };
-        }),
-
-      resetAllToDefaults: () =>
-        set({
-          customDistricts: [],
-          districtOverrides: {},
-          deletedMockIds: [],
-          districtEdits: {},
-          districtNotes: {},
-          selectedDistrict: null,
-          panelMode: "list",
-        }),
-
-      setPanelMode: (mode) =>
-        set({ panelMode: mode, ...(mode !== "create" ? { createDraft: null } : {}) }),
-
-      setCreateDraft: (draft) => set({ createDraft: draft }),
-      clearCreateDraft: () => set({ createDraft: null }),
-    }),
-    {
-      name: "gordon-treasure-map",
-      partialize: (state) => ({
-        districtNotes: state.districtNotes,
-        districtEdits: state.districtEdits,
-        adoptionRate: state.adoptionRate,
-        customDistricts: state.customDistricts,
-        districtOverrides: state.districtOverrides,
-        deletedMockIds: state.deletedMockIds,
-      }),
+      );
+      syncDistrictEdits(districtId);
     },
-  ),
+
+    updateDistrictRevenueInput: (districtId, field, value) => {
+      set((state) =>
+        updateEdits(state, districtId, (prev) => ({
+          ...prev,
+          revenueInputs: {
+            ...(prev.revenueInputs ?? {
+              holdingYears: 10,
+              tokenRatio: 40,
+              annualAppreciation: 5,
+            }),
+            [field]: value,
+          },
+        })),
+      );
+      syncDistrictEdits(districtId);
+    },
+
+    resetDistrictEdits: (districtId) =>
+      set((state) => {
+        const next = { ...state.districtEdits };
+        delete next[districtId];
+        return { districtEdits: next };
+      }),
+
+    // ── CRUD actions ──
+
+    addCustomDistrict: (district) =>
+      set((state) => {
+        const id = crypto.randomUUID();
+        const newDistrict: CustomDistrict = {
+          ...district,
+          id,
+          isCustom: true,
+          criteria: district.criteria ?? DEFAULT_CRITERIA,
+          rightsData: district.rightsData ?? DEFAULT_RIGHTS_DATA,
+          haasScores: district.haasScores ?? DEFAULT_HAAS_SCORES,
+        };
+        syncToServer("/api/treasure-map/districts", "POST", {
+          name_ko: newDistrict.name_ko,
+          name_en: newDistrict.name_en,
+          region: newDistrict.region,
+          tier: newDistrict.tier,
+          tierReason: newDistrict.tierReason,
+          lat: newDistrict.lat,
+          lng: newDistrict.lng,
+          criteria: newDistrict.criteria,
+          haasScores: newDistrict.haasScores,
+          rightsData: newDistrict.rightsData,
+        });
+        return {
+          customDistricts: [...state.customDistricts, newDistrict],
+          selectedDistrict: id,
+          panelMode: "view",
+        };
+      }),
+
+    updateCustomDistrict: (id, updates) => {
+      set((state) => ({
+        customDistricts: state.customDistricts.map((d) =>
+          d.id === id ? { ...d, ...updates } : d,
+        ),
+      }));
+      syncToServer("/api/treasure-map/districts", "PUT", { id, ...updates });
+    },
+
+    deleteDistrict: (id) =>
+      set((state) => {
+        const isCustom = state.customDistricts.some((d) => d.id === id);
+        if (isCustom) {
+          syncToServer("/api/treasure-map/districts", "DELETE", { id });
+          return {
+            customDistricts: state.customDistricts.filter(
+              (d) => d.id !== id,
+            ),
+            selectedDistrict:
+              state.selectedDistrict === id
+                ? null
+                : state.selectedDistrict,
+            panelMode:
+              state.selectedDistrict === id ? "list" : state.panelMode,
+          };
+        }
+        // Mock district: soft-delete
+        if (DISTRICT_MAP.has(id)) {
+          const newDeletedIds = [...state.deletedMockIds, id];
+          syncToServer("/api/treasure-map/preferences", "PUT", {
+            deletedMockIds: newDeletedIds,
+          });
+          return {
+            deletedMockIds: newDeletedIds,
+            selectedDistrict:
+              state.selectedDistrict === id
+                ? null
+                : state.selectedDistrict,
+            panelMode:
+              state.selectedDistrict === id ? "list" : state.panelMode,
+          };
+        }
+        return {};
+      }),
+
+    updateMockOverride: (id, overrides) => {
+      set((state) => ({
+        districtOverrides: {
+          ...state.districtOverrides,
+          [id]: { ...state.districtOverrides[id], ...overrides },
+        },
+      }));
+      syncToServer("/api/treasure-map/overrides", "PUT", {
+        districtId: id,
+        ...overrides,
+      });
+    },
+
+    restoreMockDistrict: (id) =>
+      set((state) => {
+        const nextOverrides = { ...state.districtOverrides };
+        delete nextOverrides[id];
+        const newDeletedIds = state.deletedMockIds.filter(
+          (mid) => mid !== id,
+        );
+        syncToServer("/api/treasure-map/preferences", "PUT", {
+          deletedMockIds: newDeletedIds,
+        });
+        syncToServer("/api/treasure-map/overrides", "DELETE", {
+          districtId: id,
+        });
+        return {
+          deletedMockIds: newDeletedIds,
+          districtOverrides: nextOverrides,
+        };
+      }),
+
+    resetAllToDefaults: () =>
+      set({
+        customDistricts: [],
+        districtOverrides: {},
+        deletedMockIds: [],
+        districtEdits: {},
+        districtNotes: {},
+        selectedDistrict: null,
+        panelMode: "list",
+      }),
+
+    setPanelMode: (mode) =>
+      set({
+        panelMode: mode,
+        ...(mode !== "create" ? { createDraft: null } : {}),
+      }),
+
+    setCreateDraft: (draft) => set({ createDraft: draft }),
+    clearCreateDraft: () => set({ createDraft: null }),
+  }),
 );

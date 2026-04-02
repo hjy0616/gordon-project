@@ -41,9 +41,11 @@ yarn-error.log*
 next-env.d.ts
 
 # claude
-.claude
-.superpowers
-docs
+.claude/*
+.superpowers/*
+docs/*
 CLAUDE.md
 AGENTS.md
+.serena/*
 
+/src/generated/prisma

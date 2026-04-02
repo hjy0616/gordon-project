@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTreasureMapSync } from "@/lib/hooks/use-treasure-map-sync";
 
 const TreasureMapView = dynamic(
   () => import("@/components/treasure-map/treasure-map-view"),
@@ -16,5 +17,6 @@ const TreasureMapView = dynamic(
 );
 
 export default function SecretTreasureMapPage() {
+  useTreasureMapSync();
   return <TreasureMapView />;
 }

@@ -193,7 +193,7 @@ export function CountryPanel() {
             </div>
           )}
           <p className="mt-1 text-xs text-muted-foreground">
-            {isEditing ? "편집 중 — 바깥 클릭 시 저장" : "클릭하여 편집 · 자동 저장 (localStorage)"}
+            {isEditing ? "편집 중 — 바깥 클릭 시 저장" : "클릭하여 편집 · 자동 저장"}
           </p>
         </div>
       </div>

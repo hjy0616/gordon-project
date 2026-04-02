@@ -1,0 +1,270 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ══════════════════════════════════════════════════════════
+// ENUMS
+// ══════════════════════════════════════════════════════════
+
+enum FlowType {
+  fdi
+  portfolio
+  trade
+}
+
+enum RelationType {
+  ally
+  rival
+}
+
+enum SurvivalTier {
+  HIGHEST
+  HIGH
+  MEDIUM
+  MODERATE
+  LOW
+}
+
+// ══════════════════════════════════════════════════════════
+// AUTH TABLES
+// ══════════════════════════════════════════════════════════
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String?
+  image     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  accounts          Account[]
+  sessions          Session[]
+  countryNotes      CountryNote[]
+  countryEdits      CountryEdit[]
+  capitalFlows      CapitalFlow[]
+  countryRelations  CountryRelation[]
+  customDistricts   CustomDistrict[]
+  districtNotes     DistrictNote[]
+  districtEdits     DistrictEdit[]
+  districtOverrides DistrictOverride[]
+  preference        UserPreference?
+
+  @@map("users")
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String   @map("provider_account_id")
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ══════════════════════════════════════════════════════════
+// MACRO MAP DATA
+// ══════════════════════════════════════════════════════════
+
+model CountryNote {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  isoA3        String   @map("iso_a3")
+  note         String   @db.Text
+  continentTag String?  @map("continent_tag")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, isoA3])
+  @@index([userId])
+  @@map("country_notes")
+}
+
+model CountryEdit {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  isoA3            String   @map("iso_a3")
+  population       Float?
+  gdp              Float?
+  gni              Float?
+  gniPerCapita     Float?   @map("gni_per_capita")
+  nationalDebt     Float?   @map("national_debt")
+  keyIndustries    String[] @map("key_industries")
+  techCapability   String?  @map("tech_capability")
+  militaryRank     Int?     @map("military_rank")
+  coreCapabilities Json?    @map("core_capabilities")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, isoA3])
+  @@index([userId])
+  @@map("country_edits")
+}
+
+model CapitalFlow {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  fromIso    String   @map("from_iso")
+  toIso      String   @map("to_iso")
+  fromCoords Json     @map("from_coords")
+  toCoords   Json     @map("to_coords")
+  volume     Float
+  type       FlowType
+  label      String   @default("")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, fromIso])
+  @@index([userId, toIso])
+  @@map("capital_flows")
+}
+
+model CountryRelation {
+  id        String       @id @default(cuid())
+  userId    String       @map("user_id")
+  fromIso   String       @map("from_iso")
+  toIso     String       @map("to_iso")
+  type      RelationType
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fromIso, toIso])
+  @@index([userId])
+  @@map("country_relations")
+}
+
+// ══════════════════════════════════════════════════════════
+// TREASURE MAP DATA
+// ══════════════════════════════════════════════════════════
+
+model CustomDistrict {
+  id         String       @id @default(cuid())
+  userId     String       @map("user_id")
+  nameKo     String       @map("name_ko")
+  nameEn     String       @map("name_en")
+  region     String
+  tier       SurvivalTier
+  tierReason String       @map("tier_reason") @db.Text
+  lat        Float
+  lng        Float
+  criteria   Json
+  haasScores Json         @map("haas_scores")
+  rightsData Json?        @map("rights_data")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("custom_districts")
+}
+
+model DistrictNote {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  districtId String   @map("district_id")
+  note       String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, districtId])
+  @@index([userId])
+  @@map("district_notes")
+}
+
+model DistrictEdit {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  districtId     String   @map("district_id")
+  haasScores     Json?    @map("haas_scores")
+  radarScores    Json?    @map("radar_scores")
+  usageSimInputs Json?    @map("usage_sim_inputs")
+  revenueInputs  Json?    @map("revenue_inputs")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, districtId])
+  @@index([userId])
+  @@map("district_edits")
+}
+
+model DistrictOverride {
+  id         String        @id @default(cuid())
+  userId     String        @map("user_id")
+  districtId String        @map("district_id")
+  nameKo     String?       @map("name_ko")
+  nameEn     String?       @map("name_en")
+  region     String?
+  tier       SurvivalTier?
+  tierReason String?       @map("tier_reason") @db.Text
+  criteria   Json?
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, districtId])
+  @@index([userId])
+  @@map("district_overrides")
+}
+
+// ══════════════════════════════════════════════════════════
+// USER PREFERENCES
+// ══════════════════════════════════════════════════════════
+
+model UserPreference {
+  id             String   @id @default(cuid())
+  userId         String   @unique @map("user_id")
+  adoptionRate   Int      @default(50) @map("adoption_rate")
+  deletedMockIds String[] @default([]) @map("deleted_mock_ids")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
