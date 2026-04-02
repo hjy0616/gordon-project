@@ -57,7 +57,7 @@ function LoginForm() {
         <CardDescription>계정에 로그인하세요</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pb-6">
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
@@ -83,7 +83,7 @@ function LoginForm() {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col gap-3">
+        <CardFooter className="flex flex-col gap-3 pt-4">
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "로그인 중..." : "로그인"}
           </Button>

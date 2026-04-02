@@ -81,7 +81,7 @@ export default function RegisterPage() {
         <CardDescription>새 계정을 만드세요</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pb-6">
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
@@ -128,7 +128,7 @@ export default function RegisterPage() {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col gap-3">
+        <CardFooter className="flex flex-col gap-3 pt-4">
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "가입 중..." : "회원가입"}
           </Button>

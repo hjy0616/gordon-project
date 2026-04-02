@@ -4,12 +4,32 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { ChevronRight, Globe, LayoutDashboard, Map, MapPin } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { useTheme } from "next-themes";
+import {
+  ChevronRight,
+  ChevronsUpDown,
+  Globe,
+  LayoutDashboard,
+  LogOut,
+  Map,
+  MapPin,
+  Moon,
+  Sun,
+} from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sidebar,
   SidebarContent,
@@ -25,12 +45,76 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 const mapSubItems = [
   { title: "Macro Map", href: "/map/macro-map", icon: Globe },
   { title: "Secret Treasure Map", href: "/map/secret-treasure-map", icon: MapPin },
 ];
+
+function NavUser() {
+  const { data: session } = useSession();
+  const { theme, setTheme } = useTheme();
+
+  const user = session?.user;
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : user?.email?.[0]?.toUpperCase() ?? "?";
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<SidebarMenuButton size="lg" />}
+          >
+            <Avatar className="size-8 rounded-lg">
+              <AvatarFallback className="rounded-lg">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-semibold">
+                {user?.name || "사용자"}
+              </span>
+              <span className="truncate text-xs text-muted-foreground">
+                {user?.email || ""}
+              </span>
+            </div>
+            <ChevronsUpDown className="ml-auto size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side="top"
+            align="start"
+            className="w-[--radix-dropdown-menu-trigger-width] min-w-56"
+          >
+            <DropdownMenuItem
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
+              {theme === "dark" ? (
+                <Sun className="mr-2 size-4" />
+              ) : (
+                <Moon className="mr-2 size-4" />
+              )}
+              {theme === "dark" ? "라이트 모드" : "다크 모드"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => signOut({ callbackUrl: "/login" })}
+            >
+              <LogOut className="mr-2 size-4" />
+              로그아웃
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  );
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -109,7 +193,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        <ThemeToggle />
+        <NavUser />
       </SidebarFooter>
 
       <SidebarRail />
