@@ -10,12 +10,14 @@ import {
 } from "@/components/ui/collapsible";
 import { useMacroMapStore } from "@/lib/stores/macro-map-store";
 import { getCountryDetail } from "@/data/mock-country-details";
+import { useCountryDetails } from "@/lib/queries/use-country-data";
 
 export function CountryQualitativeSection({ iso }: { iso: string }) {
   const countryEdits = useMacroMapStore((s) => s.countryEdits);
   const updateCountryEdit = useMacroMapStore((s) => s.updateCountryEdit);
 
-  const detail = getCountryDetail(iso, countryEdits);
+  const { data: detailsRes } = useCountryDetails();
+  const detail = getCountryDetail(iso, countryEdits, detailsRes?.data);
   const industries = detail?.key_industries ?? [];
   const techCapability = detail?.tech_capability ?? "";
   const militaryRank = detail?.military_rank ?? null;
@@ -36,7 +38,7 @@ export function CountryQualitativeSection({ iso }: { iso: string }) {
   const [prevIso, setPrevIso] = useState(iso);
   if (iso !== prevIso) {
     setPrevIso(iso);
-    const d = getCountryDetail(iso, countryEdits);
+    const d = getCountryDetail(iso, countryEdits, detailsRes?.data);
     setLocalTech(d?.tech_capability ?? "");
     setLocalRank(d?.military_rank != null ? String(d.military_rank) : "");
     setAddingIndustry(false);

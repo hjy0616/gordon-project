@@ -1,14 +1,17 @@
 "use client";
 
 import { useMacroMapStore } from "@/lib/stores/macro-map-store";
-import { MOCK_COUNTRIES } from "@/data/mock-countries";
+import { FALLBACK_COUNTRIES } from "@/data/static-fallback";
 import { INDICATOR_CONFIG } from "@/types/macro-map";
+import { useCountryIndicators } from "@/lib/queries/use-country-data";
 
 export function MapLegend() {
   const activeIndicator = useMacroMapStore((s) => s.activeIndicator);
   const config = INDICATOR_CONFIG[activeIndicator];
 
-  const values = MOCK_COUNTRIES.map((c) => c[activeIndicator]);
+  const { data: indicatorsRes } = useCountryIndicators();
+  const countries = indicatorsRes?.data ?? FALLBACK_COUNTRIES;
+  const values = countries.map((c) => c[activeIndicator]);
   const min = Math.min(...values);
   const max = Math.max(...values);
 

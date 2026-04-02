@@ -1,6 +1,7 @@
 import type { CountryIndicators } from "@/types/macro-map";
 
-export const MOCK_COUNTRIES: CountryIndicators[] = [
+/** API 실패 시 fallback + 금리 데이터 소스 (World Bank에 없는 지표) */
+export const FALLBACK_COUNTRIES: CountryIndicators[] = [
   { iso_a3: "USA", name: "United States", name_ko: "미국", flag_emoji: "🇺🇸", gdp_growth: 2.5, interest_rate: 5.25, inflation: 3.2, gdp_nominal: 26950, unemployment: 3.7, debt_to_gdp: 123, current_account: -3.0 },
   { iso_a3: "CHN", name: "China", name_ko: "중국", flag_emoji: "🇨🇳", gdp_growth: 5.2, interest_rate: 3.45, inflation: 0.2, gdp_nominal: 17960, unemployment: 5.2, debt_to_gdp: 83, current_account: 1.5 },
   { iso_a3: "JPN", name: "Japan", name_ko: "일본", flag_emoji: "🇯🇵", gdp_growth: 1.9, interest_rate: 0.25, inflation: 3.3, gdp_nominal: 4230, unemployment: 2.6, debt_to_gdp: 264, current_account: 3.5 },
@@ -33,4 +34,4 @@ export const MOCK_COUNTRIES: CountryIndicators[] = [
   { iso_a3: "CHL", name: "Chile", name_ko: "칠레", flag_emoji: "🇨🇱", gdp_growth: 0.2, interest_rate: 8.25, inflation: 3.9, gdp_nominal: 335, unemployment: 8.5, debt_to_gdp: 38, current_account: -3.6 },
 ];
 
-export const COUNTRY_MAP = new Map(MOCK_COUNTRIES.map((c) => [c.iso_a3, c]));
+export const FALLBACK_COUNTRY_MAP = new Map(FALLBACK_COUNTRIES.map((c) => [c.iso_a3, c]));

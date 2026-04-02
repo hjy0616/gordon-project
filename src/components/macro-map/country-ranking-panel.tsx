@@ -1,18 +1,21 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMacroMapStore } from "@/lib/stores/macro-map-store";
-import { MOCK_COUNTRIES } from "@/data/mock-countries";
+import { FALLBACK_COUNTRIES } from "@/data/static-fallback";
 import { DEFAULT_CONTINENT_TAGS } from "@/data/country-continents";
 import { CONTINENT_OPTIONS } from "@/types/macro-map";
-
-const SORTED_COUNTRIES = [...MOCK_COUNTRIES].sort(
-  (a, b) => b.gdp_nominal - a.gdp_nominal
-);
+import { useCountryIndicators } from "@/lib/queries/use-country-data";
 
 export function CountryRankingPanel() {
+  const { data: indicatorsRes } = useCountryIndicators();
+  const countries = indicatorsRes?.data ?? FALLBACK_COUNTRIES;
+  const SORTED_COUNTRIES = useMemo(
+    () => [...countries].sort((a, b) => b.gdp_nominal - a.gdp_nominal),
+    [countries],
+  );
   const selectedCountry = useMacroMapStore((s) => s.selectedCountry);
   const selectCountry = useMacroMapStore((s) => s.selectCountry);
   const toggleRanking = useMacroMapStore((s) => s.toggleRanking);

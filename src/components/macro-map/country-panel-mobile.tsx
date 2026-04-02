@@ -8,7 +8,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useMacroMapStore } from "@/lib/stores/macro-map-store";
-import { COUNTRY_MAP } from "@/data/mock-countries";
+import { FALLBACK_COUNTRIES } from "@/data/static-fallback";
+import { useCountryIndicators } from "@/lib/queries/use-country-data";
 import { getCountryInfo } from "@/data/country-names";
 import { CountryDetailSection } from "./country-detail-section";
 import { CountryQualitativeSection } from "./country-qualitative-section";
@@ -31,7 +32,9 @@ export function CountryPanelMobile() {
   const updateNote = useMacroMapStore((s) => s.updateNote);
   const selectCountry = useMacroMapStore((s) => s.selectCountry);
 
-  const mockData = selectedCountry ? COUNTRY_MAP.get(selectedCountry) : null;
+  const { data: indicatorsRes } = useCountryIndicators();
+  const countries = indicatorsRes?.data ?? FALLBACK_COUNTRIES;
+  const mockData = selectedCountry ? countries.find((c) => c.iso_a3 === selectedCountry) ?? null : null;
   const info = selectedCountry
     ? getCountryInfo(selectedCountry, selectedCountryName ?? undefined)
     : null;

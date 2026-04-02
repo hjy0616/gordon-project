@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useMacroMapStore } from "@/lib/stores/macro-map-store";
 import { getCountryDetail } from "@/data/mock-country-details";
+import { useCountryDetails } from "@/lib/queries/use-country-data";
 import {
   CAPABILITY_CONFIG,
   EMPTY_CAPABILITIES,
@@ -36,7 +37,8 @@ export function CountryCapabilitiesSection({ iso }: Props) {
   const countryEdits = useMacroMapStore((s) => s.countryEdits);
   const updateCountryEdit = useMacroMapStore((s) => s.updateCountryEdit);
 
-  const detail = getCountryDetail(iso, countryEdits);
+  const { data: detailsRes } = useCountryDetails();
+  const detail = getCountryDetail(iso, countryEdits, detailsRes?.data);
   const [local, setLocal] = useState(() => buildLocal(detail?.core_capabilities));
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -44,7 +46,7 @@ export function CountryCapabilitiesSection({ iso }: Props) {
   const [prevIso, setPrevIso] = useState(iso);
   if (iso !== prevIso) {
     setPrevIso(iso);
-    const d = getCountryDetail(iso, countryEdits);
+    const d = getCountryDetail(iso, countryEdits, detailsRes?.data);
     setLocal(buildLocal(d?.core_capabilities));
   }
 

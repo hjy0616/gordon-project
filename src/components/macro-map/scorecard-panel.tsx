@@ -9,8 +9,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useMacroMapStore } from "@/lib/stores/macro-map-store";
-import { MOCK_COUNTRIES } from "@/data/mock-countries";
+import { FALLBACK_COUNTRIES } from "@/data/static-fallback";
+import { useCountryIndicators } from "@/lib/queries/use-country-data";
 import { getCountryDetail } from "@/data/mock-country-details";
+import { useCountryDetails } from "@/lib/queries/use-country-data";
 import { DEFAULT_CONTINENT_TAGS } from "@/data/country-continents";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -88,13 +90,17 @@ export function ScorecardPanel() {
   const countryEdits = useMacroMapStore((s) => s.countryEdits);
   const continentTags = useMacroMapStore((s) => s.continentTags);
 
+  const { data: indicatorsRes } = useCountryIndicators();
+  const countries = indicatorsRes?.data ?? FALLBACK_COUNTRIES;
+  const { data: detailsRes } = useCountryDetails();
+
   const [sortKey, setSortKey] = useState<SortKey>("gdp");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   /* ---------- data merge ---------- */
   const rows = useMemo<ScorecardRow[]>(() => {
-    return MOCK_COUNTRIES.map((c) => {
-      const detail = getCountryDetail(c.iso_a3, countryEdits);
+    return countries.map((c) => {
+      const detail = getCountryDetail(c.iso_a3, countryEdits, detailsRes?.data);
       return {
         iso: c.iso_a3,
         name: c.name,
@@ -112,7 +118,7 @@ export function ScorecardPanel() {
         military_rank: detail?.military_rank ?? null,
       };
     });
-  }, [countryEdits, continentTags]);
+  }, [countries, countryEdits, continentTags, detailsRes?.data]);
 
   /* ---------- sort ---------- */
   const sortedRows = useMemo(() => {

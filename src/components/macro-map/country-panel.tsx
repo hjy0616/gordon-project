@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMacroMapStore } from "@/lib/stores/macro-map-store";
-import { COUNTRY_MAP } from "@/data/mock-countries";
+import { FALLBACK_COUNTRIES } from "@/data/static-fallback";
+import { useCountryIndicators } from "@/lib/queries/use-country-data";
 import { getCountryInfo } from "@/data/country-names";
 import { CountryDetailSection } from "./country-detail-section";
 import { CountryQualitativeSection } from "./country-qualitative-section";
@@ -28,8 +29,9 @@ export function CountryPanel() {
   const updateNote = useMacroMapStore((s) => s.updateNote);
   const selectCountry = useMacroMapStore((s) => s.selectCountry);
 
-  // Mock data (may be null for countries without data)
-  const mockData = selectedCountry ? COUNTRY_MAP.get(selectedCountry) : null;
+  const { data: indicatorsRes } = useCountryIndicators();
+  const countries = indicatorsRes?.data ?? FALLBACK_COUNTRIES;
+  const mockData = selectedCountry ? countries.find((c) => c.iso_a3 === selectedCountry) ?? null : null;
   // Basic info (always available for any country)
   const info = selectedCountry
     ? getCountryInfo(selectedCountry, selectedCountryName ?? undefined)

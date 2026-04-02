@@ -4,7 +4,9 @@ import { useEffect, useRef, useCallback } from "react";
 import maplibregl from "maplibre-gl";
 import { useTheme } from "next-themes";
 import { useMacroMapStore } from "@/lib/stores/macro-map-store";
-import { MOCK_COUNTRIES } from "@/data/mock-countries";
+import { FALLBACK_COUNTRIES } from "@/data/static-fallback";
+import { useCountryIndicators } from "@/lib/queries/use-country-data";
+import type { CountryIndicators } from "@/types/macro-map";
 import { COUNTRY_CENTROIDS } from "@/data/country-centroids";
 import { INDICATOR_CONFIG, type IndicatorType, type CountryRelation, type CapitalFlow } from "@/types/macro-map";
 import { isTooltipHovered } from "./note-tooltip";
@@ -35,15 +37,15 @@ function interpolateColor(t: number, colors: [string, string]): string {
   return `rgb(${r},${g},${b})`;
 }
 
-function buildChoroplethExpression(indicator: IndicatorType) {
-  const values = MOCK_COUNTRIES.map((c) => c[indicator]);
+function buildChoroplethExpression(indicator: IndicatorType, countries: CountryIndicators[]) {
+  const values = countries.map((c) => c[indicator]);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
   const { colorRange } = INDICATOR_CONFIG[indicator];
 
   const entries: string[] = [];
-  for (const country of MOCK_COUNTRIES) {
+  for (const country of countries) {
     const t = (country[indicator] - min) / range;
     entries.push(
       country.iso_a3,
@@ -172,6 +174,12 @@ export function MapContainer() {
   const editBaseRef = useRef<string | null>(null);
   const { resolvedTheme } = useTheme();
 
+  // API 데이터 (fallback 포함)
+  const { data: indicatorsRes } = useCountryIndicators();
+  const countries = indicatorsRes?.data ?? FALLBACK_COUNTRIES;
+  const countriesRef = useRef(countries);
+  countriesRef.current = countries;
+
   const activeIndicator = useMacroMapStore((s) => s.activeIndicator);
   const selectedCountry = useMacroMapStore((s) => s.selectedCountry);
   const showFlows = useMacroMapStore((s) => s.showFlows);
@@ -204,7 +212,7 @@ export function MapContainer() {
         type: "fill",
         source: "countries",
         paint: {
-          "fill-color": buildChoroplethExpression(state.activeIndicator),
+          "fill-color": buildChoroplethExpression(state.activeIndicator, countriesRef.current),
           "fill-opacity": [
             "case",
             ["boolean", ["feature-state", "hover"], false],
@@ -588,16 +596,16 @@ export function MapContainer() {
     });
   }, [resolvedTheme, addCustomLayers]);
 
-  // ── 지표 변경 ──
+  // ── 지표 변경 또는 API 데이터 로드 시 choropleth 업데이트 ──
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current || !map.getLayer("countries-fill")) return;
     map.setPaintProperty(
       "countries-fill",
       "fill-color",
-      buildChoroplethExpression(activeIndicator)
+      buildChoroplethExpression(activeIndicator, countries)
     );
-  }, [activeIndicator]);
+  }, [activeIndicator, countries]);
 
   // ── 자본흐름 토글 ──
   useEffect(() => {

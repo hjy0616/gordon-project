@@ -1,5 +1,6 @@
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { QueryProvider } from "@/lib/providers/query-provider";
 
 export default function AppLayout({
   children,
@@ -7,16 +8,18 @@ export default function AppLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-12 items-center px-4">
-          <SidebarTrigger />
-        </header>
-        <div className="flex-1 p-6">
-          {children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <QueryProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <header className="flex h-12 items-center px-4">
+            <SidebarTrigger />
+          </header>
+          <div className="flex-1 p-6">
+            {children}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </QueryProvider>
   );
 }

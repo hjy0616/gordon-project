@@ -12,6 +12,7 @@ import { useMacroMapStore } from "@/lib/stores/macro-map-store";
 import { getCountryDetail } from "@/data/mock-country-details";
 import { DETAIL_FIELD_CONFIG } from "@/types/macro-map";
 import type { CountryEditableData } from "@/types/macro-map";
+import { useCountryDetails } from "@/lib/queries/use-country-data";
 
 type DetailKey = (typeof DETAIL_FIELD_CONFIG)[number]["key"];
 
@@ -19,7 +20,8 @@ export function CountryDetailSection({ iso }: { iso: string }) {
   const countryEdits = useMacroMapStore((s) => s.countryEdits);
   const updateCountryEdit = useMacroMapStore((s) => s.updateCountryEdit);
 
-  const detail = getCountryDetail(iso, countryEdits);
+  const { data: detailsRes } = useCountryDetails();
+  const detail = getCountryDetail(iso, countryEdits, detailsRes?.data);
 
   const [localValues, setLocalValues] = useState<Record<string, string>>(() =>
     buildLocalValues(detail),
@@ -29,7 +31,7 @@ export function CountryDetailSection({ iso }: { iso: string }) {
   const [prevIso, setPrevIso] = useState(iso);
   if (iso !== prevIso) {
     setPrevIso(iso);
-    const newDetail = getCountryDetail(iso, countryEdits);
+    const newDetail = getCountryDetail(iso, countryEdits, detailsRes?.data);
     setLocalValues(buildLocalValues(newDetail));
   }
 

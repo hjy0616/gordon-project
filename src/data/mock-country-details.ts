@@ -157,21 +157,40 @@ export const DEFAULT_COUNTRY_DETAILS: Record<string, MockCountryData> = {
   },
 };
 
-/** mock 기본값 + 사용자 편집을 병합하여 국가 상세 데이터 반환 */
+/** 기본값 + API 데이터 + 사용자 편집을 병합하여 국가 상세 데이터 반환
+ *  우선순위: 사용자 편집 > API 데이터 > 정적 fallback */
 export function getCountryDetail(
   iso: string,
   edits: CountryEdits,
+  apiDetails?: Record<string, MockCountryData>,
 ): CountryEditableData | null {
   const defaults = DEFAULT_COUNTRY_DETAILS[iso];
+  const apiData = apiDetails?.[iso];
   const userEdits = edits[iso];
-  if (!defaults && !userEdits) return null;
-  if (!defaults) return userEdits as CountryEditableData;
-  if (!userEdits) return { ...defaults, core_capabilities: null };
+
+  // 아무 소스도 없으면 null
+  if (!defaults && !apiData && !userEdits) return null;
+
+  // 기본값 + API 데이터 병합
+  const base: MockCountryData = {
+    ...(defaults ?? {
+      population: null, gdp: null, gni: null, gni_per_capita: null,
+      national_debt: null, key_industries: [], tech_capability: "", military_rank: null,
+    }),
+    // API 수치 필드 덮어쓰기 (있는 경우)
+    ...(apiData ? {
+      population: apiData.population ?? defaults?.population ?? null,
+      gdp: apiData.gdp ?? defaults?.gdp ?? null,
+      gni: apiData.gni ?? defaults?.gni ?? null,
+      gni_per_capita: apiData.gni_per_capita ?? defaults?.gni_per_capita ?? null,
+    } : {}),
+  };
+
+  if (!userEdits) return { ...base, core_capabilities: null };
   return {
-    ...defaults,
+    ...base,
     core_capabilities: null,
     ...userEdits,
-    // key_industries는 배열이므로 userEdits가 있으면 완전히 대체
-    key_industries: userEdits.key_industries ?? defaults.key_industries,
+    key_industries: userEdits.key_industries ?? base.key_industries,
   };
 }
