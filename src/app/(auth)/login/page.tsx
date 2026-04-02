@@ -67,7 +67,7 @@ function LoginForm() {
               type="email"
               placeholder="email@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setError(""); }}
               required
             />
           </div>
@@ -77,7 +77,7 @@ function LoginForm() {
               id="password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setError(""); }}
               required
             />
           </div>

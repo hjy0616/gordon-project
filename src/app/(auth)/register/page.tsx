@@ -24,19 +24,23 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [errorField, setErrorField] = useState<"email" | "password" | "confirm" | "general" | "">("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setErrorField("");
 
     if (password !== confirmPassword) {
       setError("비밀번호가 일치하지 않습니다.");
+      setErrorField("confirm");
       return;
     }
 
     if (password.length < 6) {
       setError("비밀번호는 6자 이상이어야 합니다.");
+      setErrorField("password");
       return;
     }
 
@@ -50,7 +54,9 @@ export default function RegisterPage() {
 
     if (!res.ok) {
       const data = await res.json();
-      setError(data.error || "회원가입에 실패했습니다.");
+      const msg = data.error || "회원가입에 실패했습니다.";
+      setError(msg);
+      setErrorField(msg.includes("이메일") ? "email" : "general");
       setLoading(false);
       return;
     }
@@ -63,6 +69,7 @@ export default function RegisterPage() {
 
     if (result?.error) {
       setError("가입은 완료되었지만 로그인에 실패했습니다. 로그인 페이지에서 다시 시도해주세요.");
+      setErrorField("general");
       setLoading(false);
       return;
     }
@@ -81,10 +88,10 @@ export default function RegisterPage() {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4 pb-6">
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
+          {errorField === "general" && error && (
+            <p className="text-xs text-destructive">{error}</p>
           )}
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Label htmlFor="name">이름</Label>
             <Input
               id="name"
@@ -94,37 +101,49 @@ export default function RegisterPage() {
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Label htmlFor="email">이메일</Label>
             <Input
               id="email"
               type="email"
               placeholder="email@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setError(""); setErrorField(""); }}
+              className={errorField === "email" ? "border-destructive" : ""}
               required
             />
+            {errorField === "email" && (
+              <p className="text-xs text-destructive">{error}</p>
+            )}
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Label htmlFor="password">비밀번호</Label>
             <Input
               id="password"
               type="password"
               placeholder="6자 이상"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setError(""); setErrorField(""); }}
+              className={errorField === "password" ? "border-destructive" : ""}
               required
             />
+            {errorField === "password" && (
+              <p className="text-xs text-destructive">{error}</p>
+            )}
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Label htmlFor="confirmPassword">비밀번호 확인</Label>
             <Input
               id="confirmPassword"
               type="password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => { setConfirmPassword(e.target.value); setError(""); setErrorField(""); }}
+              className={errorField === "confirm" ? "border-destructive" : ""}
               required
             />
+            {errorField === "confirm" && (
+              <p className="text-xs text-destructive">{error}</p>
+            )}
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3 pt-4">
