@@ -50,6 +50,9 @@ export function CountryCapabilitiesSection({ iso }: Props) {
     setLocal(buildLocal(d?.core_capabilities));
   }
 
+  const localRef = useRef(local);
+  localRef.current = local;
+
   const handleChange = useCallback(
     (catKey: CapabilityKey, idx: 0 | 1 | 2, value: string) => {
       setLocal((prev) => {
@@ -62,10 +65,7 @@ export function CountryCapabilitiesSection({ iso }: Props) {
 
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        setLocal((latest) => {
-          updateCountryEdit(iso, "core_capabilities", latest);
-          return latest;
-        });
+        updateCountryEdit(iso, "core_capabilities", localRef.current);
       }, 300);
     },
     [iso, updateCountryEdit],
