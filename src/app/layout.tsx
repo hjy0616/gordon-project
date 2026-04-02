@@ -35,6 +35,7 @@ export default function RootLayout({
     <html
       lang="ko"
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable}`}
     >
       <body className="min-h-svh">

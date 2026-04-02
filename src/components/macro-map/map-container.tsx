@@ -7,6 +7,7 @@ import { useMacroMapStore } from "@/lib/stores/macro-map-store";
 import { MOCK_COUNTRIES } from "@/data/mock-countries";
 import { COUNTRY_CENTROIDS } from "@/data/country-centroids";
 import { INDICATOR_CONFIG, type IndicatorType, type CountryRelation, type CapitalFlow } from "@/types/macro-map";
+import { isTooltipHovered } from "./note-tooltip";
 
 const MAP_STYLES = {
   dark: "https://tiles.openfreemap.org/styles/dark",
@@ -418,12 +419,21 @@ export function MapContainer() {
           );
         }
         if (id) {
-          hoveredIdRef.current = id;
-          map.setFeatureState(
-            { source: "countries", id },
-            { hover: true }
-          );
-          st.setHovered(id as string);
+          if (hoveredIdRef.current !== id) {
+            hoveredIdRef.current = id;
+            map.setFeatureState(
+              { source: "countries", id },
+              { hover: true }
+            );
+            // 국가 중심(centroid)을 화면 좌표로 변환하여 툴팁 위치 결정
+            const centroid = COUNTRY_CENTROIDS[id as string];
+            if (centroid) {
+              const pt = map.project(centroid as [number, number]);
+              st.setHovered(id as string, { x: pt.x, y: pt.y });
+            } else {
+              st.setHovered(id as string, { x: e.point.x, y: e.point.y });
+            }
+          }
         }
       });
 
@@ -432,12 +442,18 @@ export function MapContainer() {
         map.getCanvas().style.cursor =
           st.relationEditMode || st.flowEditMode ? "crosshair" : "";
         if (hoveredIdRef.current) {
+          const leavingId = hoveredIdRef.current;
           map.setFeatureState(
-            { source: "countries", id: hoveredIdRef.current },
+            { source: "countries", id: leavingId },
             { hover: false }
           );
           hoveredIdRef.current = null;
-          st.setHovered(null);
+          // 툴팁 위에 마우스가 있으면 즉시 해제하지 않음
+          setTimeout(() => {
+            if (!isTooltipHovered()) {
+              st.setHovered(null);
+            }
+          }, 100);
         }
       });
 

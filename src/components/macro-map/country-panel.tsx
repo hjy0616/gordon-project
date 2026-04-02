@@ -9,6 +9,7 @@ import { getCountryInfo } from "@/data/country-names";
 import { CountryDetailSection } from "./country-detail-section";
 import { CountryQualitativeSection } from "./country-qualitative-section";
 import { CountryCapabilitiesSection } from "./country-capabilities-section";
+import { splitByUrls } from "@/lib/linkify";
 
 const INDICATOR_LABELS = [
   { key: "gdp_growth", label: "GDP 성장률", unit: "%" },
@@ -36,6 +37,7 @@ export function CountryPanel() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  const [isEditing, setIsEditing] = useState(false);
   const [prevCountry, setPrevCountry] = useState(selectedCountry);
   const [noteText, setNoteText] = useState(
     selectedCountry ? notes[selectedCountry] || "" : ""
@@ -44,6 +46,7 @@ export function CountryPanel() {
   if (selectedCountry !== prevCountry) {
     setPrevCountry(selectedCountry);
     setNoteText(selectedCountry ? notes[selectedCountry] || "" : "");
+    setIsEditing(false);
   }
 
   const handleNoteChange = useCallback(
@@ -149,14 +152,46 @@ export function CountryPanel() {
           <h3 className="mb-2 text-sm font-medium text-muted-foreground">
             분석 노트
           </h3>
-          <textarea
-            value={noteText}
-            onChange={(e) => handleNoteChange(e.target.value)}
-            placeholder={`${info.name_ko}에 대한 경제 분석 메모를 작성하세요...`}
-            className="h-40 w-full resize-none rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+          {isEditing ? (
+            <textarea
+              autoFocus
+              value={noteText}
+              onChange={(e) => handleNoteChange(e.target.value)}
+              onBlur={() => setIsEditing(false)}
+              placeholder={`${info.name_ko}에 대한 경제 분석 메모를 작성하세요...`}
+              className="h-40 w-full resize-none rounded-md border border-primary bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          ) : (
+            <div
+              onClick={() => setIsEditing(true)}
+              className="h-40 w-full cursor-text overflow-y-auto whitespace-pre-wrap rounded-md border border-border bg-card px-3 py-2 text-sm leading-relaxed hover:border-primary/50"
+            >
+              {noteText ? (
+                splitByUrls(noteText).map((part, i) =>
+                  part.type === "url" ? (
+                    <a
+                      key={i}
+                      href={part.value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-orange-400 underline hover:text-orange-300"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {part.value}
+                    </a>
+                  ) : (
+                    <span key={i}>{part.value}</span>
+                  ),
+                )
+              ) : (
+                <span className="text-muted-foreground">
+                  {info.name_ko}에 대한 경제 분석 메모를 작성하세요...
+                </span>
+              )}
+            </div>
+          )}
           <p className="mt-1 text-xs text-muted-foreground">
-            자동 저장됩니다 (localStorage)
+            {isEditing ? "편집 중 — 바깥 클릭 시 저장" : "클릭하여 편집 · 자동 저장 (localStorage)"}
           </p>
         </div>
       </div>

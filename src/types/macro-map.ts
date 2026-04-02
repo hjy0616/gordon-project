@@ -115,6 +115,7 @@ export interface MacroMapState {
   selectedCountry: string | null;
   selectedCountryName: string | null;
   hoveredCountry: string | null;
+  hoverPos: { x: number; y: number } | null;
   notes: CountryNotes;
   showFlows: boolean;
   showRanking: boolean;
@@ -132,20 +133,12 @@ export interface MacroMapState {
   relationEditMode: boolean;
   relationEditBase: string | null;
   relationPopover: RelationPopoverState | null;
-  // 8단계: G2 시뮬레이션
-  activeTab: "map" | "simulation";
-  activeSuperpower: SuperpowerCode;
-  objectives: Record<SuperpowerCode, SuperpowerObjective>;
-  countryGroupings: CountryGroupings;
-  issues: Record<SuperpowerCode, EconomicIssue[]>;
-  expandedIssueId: string | null;
-  issueBarExpanded: boolean;
 }
 
 export interface MacroMapActions {
   setIndicator: (indicator: IndicatorType) => void;
   selectCountry: (iso: string | null, englishName?: string) => void;
-  setHovered: (iso: string | null) => void;
+  setHovered: (iso: string | null, pos?: { x: number; y: number }) => void;
   updateNote: (iso: string, note: string) => void;
   toggleFlows: () => void;
   toggleRanking: () => void;
@@ -172,84 +165,7 @@ export interface MacroMapActions {
   removeRelation: (id: string) => void;
   showRelationPopover: (x: number, y: number, targetIso: string) => void;
   hideRelationPopover: () => void;
-  // 8단계: G2 시뮬레이션
-  setActiveTab: (tab: "map" | "simulation") => void;
-  setActiveSuperpower: (code: SuperpowerCode) => void;
-  updateObjective: (
-    code: SuperpowerCode,
-    field: keyof SuperpowerObjective,
-    value: string,
-  ) => void;
-  setCountryGroup: (
-    superpower: SuperpowerCode,
-    iso: string,
-    group: CountryGroupType,
-  ) => void;
-  addIssue: (superpower: SuperpowerCode, title: string) => void;
-  updateIssue: (
-    superpower: SuperpowerCode,
-    issueId: string,
-    updates: Partial<Pick<EconomicIssue, "title" | "analysis" | "relatedCountries">>,
-  ) => void;
-  removeIssue: (superpower: SuperpowerCode, issueId: string) => void;
-  setExpandedIssue: (id: string | null) => void;
-  toggleIssueBar: () => void;
 }
-
-// ── 8단계: G2 Simulation Types ──
-
-export type SuperpowerCode = "USA" | "CHN";
-
-export interface SuperpowerObjective {
-  principle: string;          // 1원칙 목적
-  strategicIntent: string;    // 전략적 분석
-}
-
-export type CountryGroupType = "unclassified" | "needed" | "unnecessary";
-
-/** 초강대국별 국가 분류. Record<iso, group>. 없으면 unclassified. */
-export type CountryGroupings = Record<
-  SuperpowerCode,
-  Record<string, CountryGroupType>
->;
-
-export interface IssueAnalysis {
-  cause: string;              // 원인
-  development: string;        // 전개 과정
-  result: string;             // 도출된 결과
-  strategic: string;          // 전략적 감추고 드러낸 과정
-}
-
-export interface EconomicIssue {
-  id: string;
-  title: string;
-  analysis: IssueAnalysis;
-  relatedCountries: string[];
-  createdAt: number;
-  updatedAt: number;
-}
-
-export const EMPTY_ANALYSIS: IssueAnalysis = {
-  cause: "",
-  development: "",
-  result: "",
-  strategic: "",
-};
-
-export const ANALYSIS_FIELD_CONFIG = [
-  { key: "cause", label: "원인", placeholder: "이 이슈의 근본 원인과 시작점..." },
-  { key: "development", label: "전개 과정", placeholder: "이슈가 어떻게 전개되었는지..." },
-  { key: "result", label: "도출된 결과", placeholder: "이슈로 인해 도출된 결과..." },
-  { key: "strategic", label: "전략적 감추고 드러낸 과정", placeholder: "전략적으로 감추거나 드러낸 과정..." },
-] as const;
-
-export const SUPERPOWER_CONFIG: Record<
-  SuperpowerCode,
-  { label: string; flag: string; color: string }
-> = {
-  USA: { label: "미국", flag: "🇺🇸", color: "#3b82f6" },
-  CHN: { label: "중국", flag: "🇨🇳", color: "#ef4444" },
-};
 
 export const INDICATOR_CONFIG: Record<
   IndicatorType,

@@ -6,10 +6,7 @@ import type {
   IndicatorType,
   CountryEditableData,
   RelationType,
-  SuperpowerCode,
-  EconomicIssue,
 } from "@/types/macro-map";
-import { EMPTY_ANALYSIS } from "@/types/macro-map";
 import { MOCK_RELATIONS } from "@/data/mock-relations";
 import { COUNTRY_CENTROIDS } from "@/data/country-centroids";
 
@@ -20,6 +17,7 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
       selectedCountry: null,
       selectedCountryName: null,
       hoveredCountry: null,
+      hoverPos: null,
       notes: {},
       showFlows: true,
       capitalFlows: [],
@@ -36,26 +34,14 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
       relationEditMode: false,
       relationEditBase: null,
       relationPopover: null,
-      // 8단계: G2 시뮬레이션
-      activeTab: "map" as const,
-      activeSuperpower: "USA" as SuperpowerCode,
-      objectives: {
-        USA: { principle: "", strategicIntent: "" },
-        CHN: { principle: "", strategicIntent: "" },
-      },
-      countryGroupings: { USA: {}, CHN: {} },
-      issues: { USA: [] as EconomicIssue[], CHN: [] as EconomicIssue[] },
-      expandedIssueId: null,
-      issueBarExpanded: false,
-
       setIndicator: (indicator: IndicatorType) =>
         set({ activeIndicator: indicator }),
 
       selectCountry: (iso: string | null, englishName?: string) =>
         set({ selectedCountry: iso, selectedCountryName: englishName ?? null }),
 
-      setHovered: (iso: string | null) =>
-        set({ hoveredCountry: iso }),
+      setHovered: (iso: string | null, pos?: { x: number; y: number }) =>
+        set({ hoveredCountry: iso, hoverPos: pos ?? null }),
 
       updateNote: (iso: string, note: string) =>
         set((state) => ({
@@ -215,85 +201,6 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
       hideRelationPopover: () =>
         set({ relationPopover: null }),
 
-      // ── 8단계: G2 시뮬레이션 액션 ──
-
-      setActiveTab: (tab) => set({ activeTab: tab }),
-
-      setActiveSuperpower: (code) =>
-        set({ activeSuperpower: code, expandedIssueId: null }),
-
-      updateObjective: (code, field, value) =>
-        set((state) => ({
-          objectives: {
-            ...state.objectives,
-            [code]: { ...state.objectives[code], [field]: value },
-          },
-        })),
-
-      setCountryGroup: (superpower, iso, group) =>
-        set((state) => {
-          const current = { ...state.countryGroupings[superpower] };
-          if (group === "unclassified") {
-            delete current[iso];
-          } else {
-            current[iso] = group;
-          }
-          return {
-            countryGroupings: {
-              ...state.countryGroupings,
-              [superpower]: current,
-            },
-          };
-        }),
-
-      addIssue: (superpower, title) =>
-        set((state) => {
-          const newIssue: EconomicIssue = {
-            id: crypto.randomUUID(),
-            title,
-            analysis: { ...EMPTY_ANALYSIS },
-            relatedCountries: [],
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          };
-          return {
-            issues: {
-              ...state.issues,
-              [superpower]: [...state.issues[superpower], newIssue],
-            },
-            expandedIssueId: newIssue.id,
-            issueBarExpanded: true,
-          };
-        }),
-
-      updateIssue: (superpower, issueId, updates) =>
-        set((state) => ({
-          issues: {
-            ...state.issues,
-            [superpower]: state.issues[superpower].map((issue) =>
-              issue.id === issueId
-                ? { ...issue, ...updates, updatedAt: Date.now() }
-                : issue,
-            ),
-          },
-        })),
-
-      removeIssue: (superpower, issueId) =>
-        set((state) => ({
-          issues: {
-            ...state.issues,
-            [superpower]: state.issues[superpower].filter(
-              (i) => i.id !== issueId,
-            ),
-          },
-          expandedIssueId:
-            state.expandedIssueId === issueId ? null : state.expandedIssueId,
-        })),
-
-      setExpandedIssue: (id) => set({ expandedIssueId: id }),
-
-      toggleIssueBar: () =>
-        set((state) => ({ issueBarExpanded: !state.issueBarExpanded })),
     }),
     {
       name: "gordon-macro-map",
@@ -303,10 +210,6 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
         countryEdits: state.countryEdits,
         capitalFlows: state.capitalFlows,
         relations: state.relations,
-        // 8단계
-        objectives: state.objectives,
-        countryGroupings: state.countryGroupings,
-        issues: state.issues,
       }),
     },
   ),
