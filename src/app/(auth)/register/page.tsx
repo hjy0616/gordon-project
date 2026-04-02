@@ -32,6 +32,24 @@ export default function RegisterPage() {
     setError("");
     setErrorField("");
 
+    if (!email) {
+      setError("이메일을 입력해주세요.");
+      setErrorField("email");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("올바른 이메일 형식을 입력해주세요.");
+      setErrorField("email");
+      return;
+    }
+
+    if (!password) {
+      setError("비밀번호를 입력해주세요.");
+      setErrorField("password");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("비밀번호가 일치하지 않습니다.");
       setErrorField("confirm");
@@ -86,7 +104,7 @@ export default function RegisterPage() {
         </CardTitle>
         <CardDescription>새 계정을 만드세요</CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <CardContent className="space-y-4 pb-6">
           {errorField === "general" && error && (
             <p className="text-xs text-destructive">{error}</p>
