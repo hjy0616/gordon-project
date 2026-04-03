@@ -148,6 +148,7 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
           simulations: updateSim(state.simulations, simId, () => ({
             status: "completed",
           })),
+          mainView: "summary" as MainView,
         })),
 
       setPanelMode: (mode) => set({ panelMode: mode }),
