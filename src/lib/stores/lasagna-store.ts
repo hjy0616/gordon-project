@@ -7,7 +7,6 @@ import type {
   MyAnalysis,
   SimFlowNode,
   SimFlowEdge,
-  EventCategory,
   PanelMode,
   MainView,
 } from "@/types/lasagna";
@@ -35,7 +34,7 @@ interface LasagnaState {
 interface LasagnaActions {
   createSimulation: (
     title: string,
-    eventType: EventCategory,
+    eventType: string,
     eventDescription: string,
   ) => void;
   deleteSimulation: (id: string) => void;

@@ -76,7 +76,7 @@ export interface SimFlowEdge {
 export interface Simulation {
   id: string;
   title: string;
-  eventType: EventCategory;
+  eventType: string;
   eventDescription: string;
   currentStep: number;
   status: "in_progress" | "completed";
@@ -146,7 +146,7 @@ export const STEP_PROMPTS: Record<number, string> = {
 
 export function createEmptySimulation(
   title: string,
-  eventType: EventCategory,
+  eventType: string,
   eventDescription: string,
 ): Simulation {
   return {
