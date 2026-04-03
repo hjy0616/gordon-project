@@ -80,11 +80,25 @@ export function FlowCanvas({ simulation, mode }: FlowCanvasProps) {
   const updateFlowEdges = useLasagnaStore((s) => s.updateFlowEdges);
   const rfInstance = useRef<ReactFlowInstance | null>(null);
 
-  const initialNodes = useMemo(
-    () => toFlowNodes(simulation.flowNodes),
+  const initialNodes = useMemo(() => {
+    if (simulation.flowNodes.length > 0) {
+      return toFlowNodes(simulation.flowNodes);
+    }
+    // Auto-create event root node if empty and not readonly
+    if (mode !== "readonly") {
+      const rootNode: SimFlowNode = {
+        id: "event-root",
+        type: "event",
+        position: { x: 250, y: 50 },
+        data: { label: simulation.title },
+      };
+      // Persist to store immediately
+      updateFlowNodes(simulation.id, [rootNode]);
+      return toFlowNodes([rootNode]);
+    }
+    return [];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [simulation.id],
-  );
+  }, [simulation.id]);
   const initialEdges = useMemo(
     () => toFlowEdges(simulation.flowEdges),
     // eslint-disable-next-line react-hooks/exhaustive-deps

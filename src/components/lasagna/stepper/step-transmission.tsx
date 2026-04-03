@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { useLasagnaStore } from "@/lib/stores/lasagna-store";
 import type { Simulation } from "@/types/lasagna";
@@ -12,22 +11,7 @@ interface StepTransmissionProps {
 
 export function StepTransmission({ simulation }: StepTransmissionProps) {
   const updateStep = useLasagnaStore((s) => s.updateStep);
-  const updateFlowNodes = useLasagnaStore((s) => s.updateFlowNodes);
-
   const stepData = simulation.steps[4] ?? {};
-
-  useEffect(() => {
-    if (simulation.flowNodes.length === 0) {
-      updateFlowNodes(simulation.id, [
-        {
-          id: "event-root",
-          type: "event",
-          position: { x: 250, y: 50 },
-          data: { label: simulation.title },
-        },
-      ]);
-    }
-  }, [simulation.id, simulation.flowNodes.length, simulation.title, updateFlowNodes]);
 
   return (
     <div className="flex flex-col gap-4">
