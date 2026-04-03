@@ -196,7 +196,7 @@ export function AppSidebar() {
                   render={<Link href="/lasagna" />}
                 >
                   <Layers />
-                  <span>Lasagna</span>
+                  <span>Lasagna <span className="text-[10px] text-muted-foreground">(beta)</span></span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
