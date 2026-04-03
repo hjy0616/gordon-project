@@ -62,7 +62,7 @@ export function StepContainer({ simulation }: StepContainerProps) {
   }
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+    <div className="flex h-full min-w-0 flex-col overflow-y-auto overflow-x-hidden">
       {/* Prompt box */}
       <div className="mx-4 mt-4 rounded-md border-l-[3px] border-primary bg-primary/5 px-4 py-3">
         <p className="text-xs font-medium text-muted-foreground">
