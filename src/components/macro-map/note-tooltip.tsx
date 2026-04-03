@@ -21,14 +21,12 @@ export function NoteTooltip() {
   const hoveredCountry = useMacroMapStore((s) => s.hoveredCountry);
   const hoverPos = useMacroMapStore((s) => s.hoverPos);
   const notes = useMacroMapStore((s) => s.notes);
-  const flowEditMode = useMacroMapStore((s) => s.flowEditMode);
-  const relationEditMode = useMacroMapStore((s) => s.relationEditMode);
-  const flowPopover = useMacroMapStore((s) => s.flowPopover);
-  const relationPopover = useMacroMapStore((s) => s.relationPopover);
+  const editMode = useMacroMapStore((s) => s.editMode);
+  const editPopover = useMacroMapStore((s) => s.editPopover);
 
   if (!hoveredCountry || !hoverPos) return null;
-  if (flowEditMode || relationEditMode) return null;
-  if (flowPopover || relationPopover) return null;
+  if (editMode) return null;
+  if (editPopover) return null;
 
   const noteText = notes[hoveredCountry];
   if (!noteText?.trim()) return null;

@@ -51,11 +51,23 @@ export function useMacroMapSync() {
       }
 
       if (flows && flows.length > 0) {
-        useMacroMapStore.setState({ capitalFlows: flows });
+        // 하위 호환: color/lineStyle 없는 기존 데이터에 기본값 주입
+        const hydratedFlows = flows.map((f) => ({
+          ...f,
+          color: f.color ?? "#e67e22",
+          lineStyle: f.lineStyle ?? ("dashed" as const),
+        }));
+        useMacroMapStore.setState({ capitalFlows: hydratedFlows });
       }
 
       if (relations && relations.length > 0) {
-        useMacroMapStore.setState({ relations });
+        // 하위 호환: color/lineStyle 없는 기존 데이터에 기본값 주입
+        const hydratedRelations = relations.map((r) => ({
+          ...r,
+          color: r.color ?? (r.type === "ally" ? "#3b82f6" : "#800020"),
+          lineStyle: r.lineStyle ?? (r.type === "ally" ? "solid" as const : "dashed" as const),
+        }));
+        useMacroMapStore.setState({ relations: hydratedRelations });
       }
 
       setHydrated(true);

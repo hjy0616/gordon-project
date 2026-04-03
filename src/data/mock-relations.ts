@@ -1,4 +1,9 @@
-import type { CountryRelation } from "@/types/macro-map";
+import type { CountryRelation, LineStyle } from "@/types/macro-map";
+
+const RELATION_DEFAULTS: Record<"ally" | "rival", { color: string; lineStyle: LineStyle }> = {
+  ally: { color: "#3b82f6", lineStyle: "solid" },
+  rival: { color: "#800020", lineStyle: "dashed" },
+};
 
 /** 양방향 쌍 생성 헬퍼 */
 function pair(
@@ -6,9 +11,10 @@ function pair(
   b: string,
   type: "ally" | "rival",
 ): [CountryRelation, CountryRelation] {
+  const { color, lineStyle } = RELATION_DEFAULTS[type];
   return [
-    { id: `${a}-${b}`, from_iso: a, to_iso: b, type },
-    { id: `${b}-${a}`, from_iso: b, to_iso: a, type },
+    { id: `${a}-${b}`, from_iso: a, to_iso: b, type, color, lineStyle },
+    { id: `${b}-${a}`, from_iso: b, to_iso: a, type, color, lineStyle },
   ];
 }
 

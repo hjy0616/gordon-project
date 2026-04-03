@@ -11,7 +11,7 @@ import {
   ListOrdered,
   LayoutGrid,
   GitBranch,
-  Link,
+  Pencil,
 } from "lucide-react";
 
 const INDICATOR_ICONS: Record<IndicatorType, React.ReactNode> = {
@@ -31,12 +31,8 @@ export function IndicatorSwitcher() {
   const toggleScorecard = useMacroMapStore((s) => s.toggleScorecard);
   const showRelations = useMacroMapStore((s) => s.showRelations);
   const toggleRelations = useMacroMapStore((s) => s.toggleRelations);
-  const relationEditMode = useMacroMapStore((s) => s.relationEditMode);
-  const toggleRelationEditMode = useMacroMapStore(
-    (s) => s.toggleRelationEditMode,
-  );
-  const flowEditMode = useMacroMapStore((s) => s.flowEditMode);
-  const toggleFlowEditMode = useMacroMapStore((s) => s.toggleFlowEditMode);
+  const editMode = useMacroMapStore((s) => s.editMode);
+  const toggleEditMode = useMacroMapStore((s) => s.toggleEditMode);
 
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border bg-background/80 p-1.5 backdrop-blur-sm">
@@ -102,31 +98,17 @@ export function IndicatorSwitcher() {
       <div className="mx-1 h-6 w-px bg-border" />
 
       <Button
-        variant={flowEditMode ? "default" : "ghost"}
+        variant={editMode ? "default" : "ghost"}
         size="sm"
-        onClick={toggleFlowEditMode}
+        onClick={toggleEditMode}
         className={
-          flowEditMode
-            ? "gap-1.5 bg-orange-600 text-white hover:bg-orange-700"
+          editMode
+            ? "gap-1.5 bg-gradient-to-r from-orange-600 to-[#800020] text-white hover:from-orange-700 hover:to-[#990028]"
             : "gap-1.5"
         }
       >
-        <Route className="h-4 w-4" />
-        <span className="hidden sm:inline">흐름 편집</span>
-      </Button>
-
-      <Button
-        variant={relationEditMode ? "default" : "ghost"}
-        size="sm"
-        onClick={toggleRelationEditMode}
-        className={
-          relationEditMode
-            ? "gap-1.5 bg-[#800020] text-white hover:bg-[#990028]"
-            : "gap-1.5"
-        }
-      >
-        <Link className="h-4 w-4" />
-        <span className="hidden sm:inline">관계 편집</span>
+        <Pencil className="h-4 w-4" />
+        <span className="hidden sm:inline">편집</span>
       </Button>
     </div>
   );

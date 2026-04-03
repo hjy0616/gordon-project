@@ -19,8 +19,13 @@ const MAP_STYLES = {
 const GEOJSON_URL = "/data/countries.geojson";
 
 const RELATION_LAYER_IDS = [
-  "relation-lines-ally",
-  "relation-lines-rival",
+  "relation-lines-solid",
+  "relation-lines-dashed",
+] as const;
+
+const FLOW_LAYER_IDS = [
+  "flow-lines-solid",
+  "flow-lines-dashed",
 ] as const;
 
 function interpolateColor(t: number, colors: [string, string]): string {
@@ -107,6 +112,10 @@ function buildFlowGeoJSON(flows: CapitalFlow[]): GeoJSON.FeatureCollection {
         volume: flow.volume,
         type: flow.type,
         label: flow.label,
+        color: flow.color ?? "#e67e22",
+        lineStyle: flow.lineStyle ?? "dashed",
+        from_iso: flow.from_iso,
+        to_iso: flow.to_iso,
       },
       geometry: {
         type: "LineString" as const,
@@ -116,16 +125,17 @@ function buildFlowGeoJSON(flows: CapitalFlow[]): GeoJSON.FeatureCollection {
   };
 }
 
-/** 관계선 GeoJSON 빌더 — 양방향 중복 제거 */
+/** 관계선 GeoJSON 빌더 — 양방향 중복 제거, lineStyle로 필터 */
 function buildRelationGeoJSON(
   relations: CountryRelation[],
-  filterType: "ally" | "rival",
+  filterLineStyle: "solid" | "dashed",
 ): GeoJSON.FeatureCollection {
   const seen = new Set<string>();
   const features: GeoJSON.Feature[] = [];
 
   for (const r of relations) {
-    if (r.type !== filterType) continue;
+    const effectiveLineStyle = r.lineStyle ?? (r.type === "ally" ? "solid" : "dashed");
+    if (effectiveLineStyle !== filterLineStyle) continue;
     const pairKey = [r.from_iso, r.to_iso].sort().join("-");
     if (seen.has(pairKey)) continue;
     seen.add(pairKey);
@@ -141,6 +151,8 @@ function buildRelationGeoJSON(
         from_iso: r.from_iso,
         to_iso: r.to_iso,
         type: r.type,
+        color: r.color ?? (r.type === "ally" ? "#3b82f6" : "#800020"),
+        lineStyle: effectiveLineStyle,
       },
       geometry: {
         type: "LineString",
@@ -185,11 +197,9 @@ export function MapContainer() {
   const showFlows = useMacroMapStore((s) => s.showFlows);
   const showRelations = useMacroMapStore((s) => s.showRelations);
   const relations = useMacroMapStore((s) => s.relations);
-  const relationEditMode = useMacroMapStore((s) => s.relationEditMode);
-  const relationEditBase = useMacroMapStore((s) => s.relationEditBase);
   const capitalFlows = useMacroMapStore((s) => s.capitalFlows);
-  const flowEditMode = useMacroMapStore((s) => s.flowEditMode);
-  const flowEditBase = useMacroMapStore((s) => s.flowEditBase);
+  const editMode = useMacroMapStore((s) => s.editMode);
+  const editBase = useMacroMapStore((s) => s.editBase);
 
   const hoveredIdRef = useRef<string | number | null>(null);
 
@@ -265,28 +275,28 @@ export function MapContainer() {
       beforeId
     );
 
-    // ── 관계선 레이어 (자본흐름 아래) ──
-    map.addSource("relations-ally", {
+    // ── 관계선 레이어 (solid + dashed 분리) ──
+    map.addSource("relations-solid", {
       type: "geojson",
-      data: buildRelationGeoJSON(state.relations, "ally"),
+      data: buildRelationGeoJSON(state.relations, "solid"),
     });
-    map.addSource("relations-rival", {
+    map.addSource("relations-dashed", {
       type: "geojson",
-      data: buildRelationGeoJSON(state.relations, "rival"),
+      data: buildRelationGeoJSON(state.relations, "dashed"),
     });
 
     map.addLayer(
       {
-        id: "relation-lines-ally",
+        id: "relation-lines-solid",
         type: "line",
-        source: "relations-ally",
+        source: "relations-solid",
         layout: {
           visibility: state.showRelations ? "visible" : "none",
           "line-cap": "round",
           "line-join": "round",
         },
         paint: {
-          "line-color": "#3b82f6",
+          "line-color": ["get", "color"],
           "line-width": 2,
           "line-opacity": 0.7,
         },
@@ -296,16 +306,16 @@ export function MapContainer() {
 
     map.addLayer(
       {
-        id: "relation-lines-rival",
+        id: "relation-lines-dashed",
         type: "line",
-        source: "relations-rival",
+        source: "relations-dashed",
         layout: {
           visibility: state.showRelations ? "visible" : "none",
           "line-cap": "round",
           "line-join": "round",
         },
         paint: {
-          "line-color": "#800020",
+          "line-color": ["get", "color"],
           "line-width": 2,
           "line-opacity": 0.7,
           "line-dasharray": [4, 3],
@@ -314,33 +324,55 @@ export function MapContainer() {
       beforeId
     );
 
-    // ── 자본흐름 레이어 (최상단) ──
+    // ── 자본흐름 레이어 (solid + dashed 분리) ──
     map.addSource("flows", {
       type: "geojson",
       data: buildFlowGeoJSON(state.capitalFlows),
     });
 
     map.addLayer({
-      id: "flow-lines",
+      id: "flow-lines-solid",
       type: "line",
       source: "flows",
+      filter: ["==", ["get", "lineStyle"], "solid"],
       layout: {
         visibility: state.showFlows ? "visible" : "none",
         "line-cap": "round",
         "line-join": "round",
       },
       paint: {
-        "line-color": "#e67e22",
+        "line-color": ["get", "color"],
         "line-width": [
           "interpolate",
           ["linear"],
           ["get", "volume"],
-          10,
-          1.5,
-          100,
-          3,
-          500,
-          5,
+          10, 1.5,
+          100, 3,
+          500, 5,
+        ],
+        "line-opacity": 0.6,
+      },
+    });
+
+    map.addLayer({
+      id: "flow-lines-dashed",
+      type: "line",
+      source: "flows",
+      filter: ["==", ["get", "lineStyle"], "dashed"],
+      layout: {
+        visibility: state.showFlows ? "visible" : "none",
+        "line-cap": "round",
+        "line-join": "round",
+      },
+      paint: {
+        "line-color": ["get", "color"],
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["get", "volume"],
+          10, 1.5,
+          100, 3,
+          500, 5,
         ],
         "line-opacity": 0.6,
         "line-dasharray": [2, 3],
@@ -393,7 +425,6 @@ export function MapContainer() {
       map.on("move", () => {
         const { lat } = map.getCenter();
         let lng = map.getCenter().lng;
-        // MapLibre가 경도를 [-180,180]으로 정규화하므로 이전 값 기준 unwrap
         while (lng - prevLng > 180) lng -= 360;
         while (lng - prevLng < -180) lng += 360;
         prevLng = lng;
@@ -417,8 +448,7 @@ export function MapContainer() {
       map.on("mousemove", "countries-fill", (e) => {
         if (!e.features?.length) return;
         const st = useMacroMapStore.getState();
-        map.getCanvas().style.cursor =
-          st.relationEditMode || st.flowEditMode ? "crosshair" : "pointer";
+        map.getCanvas().style.cursor = st.editMode ? "crosshair" : "pointer";
         const id = e.features[0].properties?.ISO_A3;
         if (hoveredIdRef.current && hoveredIdRef.current !== id) {
           map.setFeatureState(
@@ -433,7 +463,6 @@ export function MapContainer() {
               { source: "countries", id },
               { hover: true }
             );
-            // 국가 중심(centroid)을 화면 좌표로 변환하여 툴팁 위치 결정
             const centroid = COUNTRY_CENTROIDS[id as string];
             if (centroid) {
               const pt = map.project(centroid as [number, number]);
@@ -447,8 +476,7 @@ export function MapContainer() {
 
       map.on("mouseleave", "countries-fill", () => {
         const st = useMacroMapStore.getState();
-        map.getCanvas().style.cursor =
-          st.relationEditMode || st.flowEditMode ? "crosshair" : "";
+        map.getCanvas().style.cursor = st.editMode ? "crosshair" : "";
         if (hoveredIdRef.current) {
           const leavingId = hoveredIdRef.current;
           map.setFeatureState(
@@ -456,7 +484,6 @@ export function MapContainer() {
             { hover: false }
           );
           hoveredIdRef.current = null;
-          // 툴팁 위에 마우스가 있으면 즉시 해제하지 않음
           setTimeout(() => {
             if (!isTooltipHovered()) {
               st.setHovered(null);
@@ -466,41 +493,54 @@ export function MapContainer() {
       });
 
       // ── 자본흐름 라인 호버 ──
-      map.on("mousemove", "flow-lines", () => {
-        const st = useMacroMapStore.getState();
-        if (!st.relationEditMode && !st.flowEditMode) {
-          map.getCanvas().style.cursor = "pointer";
-        }
-      });
-      map.on("mouseleave", "flow-lines", () => {
-        const st = useMacroMapStore.getState();
-        if (!st.relationEditMode && !st.flowEditMode) {
-          map.getCanvas().style.cursor = "";
-        }
-      });
+      for (const layerId of FLOW_LAYER_IDS) {
+        map.on("mousemove", layerId, () => {
+          const st = useMacroMapStore.getState();
+          if (!st.editMode) map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", layerId, () => {
+          const st = useMacroMapStore.getState();
+          if (!st.editMode) map.getCanvas().style.cursor = "";
+        });
+      }
 
-      // ── 자본흐름 라인 클릭 → 팝오버로 상세 보기/편집 ──
-      map.on("click", "flow-lines", (e) => {
-        if (!e.features?.length) return;
-        e.preventDefault();
-        const flowId = e.features[0].properties?.id as string;
-        if (!flowId) return;
+      // ── 자본흐름 라인 클릭 → 통합 팝오버 ──
+      for (const layerId of FLOW_LAYER_IDS) {
+        map.on("click", layerId, (e) => {
+          if (!e.features?.length) return;
+          e.preventDefault();
+          const flowId = e.features[0].properties?.id as string;
+          if (!flowId) return;
 
-        const st = useMacroMapStore.getState();
-        const flow = st.capitalFlows.find((f) => f.id === flowId);
-        if (!flow) return;
+          const st = useMacroMapStore.getState();
+          const flow = st.capitalFlows.find((f) => f.id === flowId);
+          if (!flow) return;
 
-        // 자본흐름 편집 모드로 전환 + 해당 흐름의 팝오버 표시
-        if (!st.flowEditMode) {
-          st.toggleFlowEditMode();
-        }
-        st.setFlowEditBase(flow.from_iso);
-        st.showFlowPopover(e.point.x, e.point.y, flow.to_iso);
-      });
+          if (!st.editMode) st.toggleEditMode();
+          st.setEditBase(flow.from_iso);
+          st.showEditPopover(e.point.x, e.point.y, flow.to_iso, "flow");
+        });
+      }
+
+      // ── 관계선 라인 클릭 → 통합 팝오버 ──
+      for (const layerId of RELATION_LAYER_IDS) {
+        map.on("click", layerId, (e) => {
+          if (!e.features?.length) return;
+          e.preventDefault();
+          const props = e.features[0].properties;
+          const fromIso = props?.from_iso as string;
+          const toIso = props?.to_iso as string;
+          if (!fromIso || !toIso) return;
+
+          const st = useMacroMapStore.getState();
+          if (!st.editMode) st.toggleEditMode();
+          st.setEditBase(fromIso);
+          st.showEditPopover(e.point.x, e.point.y, toIso, "relation");
+        });
+      }
 
       // ── 국가 클릭 ──
       map.on("click", "countries-fill", (e) => {
-        // flow-lines 클릭이 이미 처리한 경우 무시
         if (e.defaultPrevented) return;
         if (!e.features?.length) return;
         const props = e.features[0].properties;
@@ -509,22 +549,12 @@ export function MapContainer() {
 
         const st = useMacroMapStore.getState();
 
-        // 관계선 편집 모드
-        if (st.relationEditMode) {
-          if (!st.relationEditBase) {
-            st.setRelationEditBase(iso);
-          } else if (iso !== st.relationEditBase) {
-            st.showRelationPopover(e.point.x, e.point.y, iso);
-          }
-          return;
-        }
-
-        // 자본흐름 편집 모드
-        if (st.flowEditMode) {
-          if (!st.flowEditBase) {
-            st.setFlowEditBase(iso);
-          } else if (iso !== st.flowEditBase) {
-            st.showFlowPopover(e.point.x, e.point.y, iso);
+        // 통합 편집 모드
+        if (st.editMode) {
+          if (!st.editBase) {
+            st.setEditBase(iso);
+          } else if (iso !== st.editBase) {
+            st.showEditPopover(e.point.x, e.point.y, iso, "flow");
           }
           return;
         }
@@ -551,12 +581,9 @@ export function MapContainer() {
         });
         if (!features.length) {
           const st = useMacroMapStore.getState();
-          if (st.relationEditMode) {
-            st.setRelationEditBase(null);
-            st.hideRelationPopover();
-          } else if (st.flowEditMode) {
-            st.setFlowEditBase(null);
-            st.hideFlowPopover();
+          if (st.editMode) {
+            st.setEditBase(null);
+            st.hideEditPopover();
           } else {
             st.selectCountry(null);
           }
@@ -610,12 +637,13 @@ export function MapContainer() {
   // ── 자본흐름 토글 ──
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !readyRef.current || !map.getLayer("flow-lines")) return;
-    map.setLayoutProperty(
-      "flow-lines",
-      "visibility",
-      showFlows ? "visible" : "none"
-    );
+    if (!map || !readyRef.current) return;
+    const vis = showFlows ? "visible" : "none";
+    for (const layerId of FLOW_LAYER_IDS) {
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, "visibility", vis);
+      }
+    }
   }, [showFlows]);
 
   // ── 관계선 토글 ──
@@ -635,11 +663,11 @@ export function MapContainer() {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
 
-    const allySource = map.getSource("relations-ally") as maplibregl.GeoJSONSource | undefined;
-    const rivalSource = map.getSource("relations-rival") as maplibregl.GeoJSONSource | undefined;
+    const solidSource = map.getSource("relations-solid") as maplibregl.GeoJSONSource | undefined;
+    const dashedSource = map.getSource("relations-dashed") as maplibregl.GeoJSONSource | undefined;
 
-    if (allySource) allySource.setData(buildRelationGeoJSON(relations, "ally"));
-    if (rivalSource) rivalSource.setData(buildRelationGeoJSON(relations, "rival"));
+    if (solidSource) solidSource.setData(buildRelationGeoJSON(relations, "solid"));
+    if (dashedSource) dashedSource.setData(buildRelationGeoJSON(relations, "dashed"));
   }, [relations]);
 
   // ── 자본흐름 데이터 변경 → 소스 업데이트 ──
@@ -695,8 +723,6 @@ export function MapContainer() {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
 
-    const currentBase = relationEditBase ?? flowEditBase;
-
     // 이전 기준 국가 해제
     if (editBaseRef.current) {
       map.setFeatureState(
@@ -706,23 +732,22 @@ export function MapContainer() {
     }
 
     // 새 기준 국가 설정
-    if (currentBase) {
+    if (editBase) {
       map.setFeatureState(
-        { source: "countries", id: currentBase },
+        { source: "countries", id: editBase },
         { editBase: true }
       );
     }
 
-    editBaseRef.current = currentBase;
-  }, [relationEditBase, flowEditBase]);
+    editBaseRef.current = editBase;
+  }, [editBase]);
 
   // ── 편집 모드 커서 ──
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    map.getCanvas().style.cursor =
-      relationEditMode || flowEditMode ? "crosshair" : "";
-  }, [relationEditMode, flowEditMode]);
+    map.getCanvas().style.cursor = editMode ? "crosshair" : "";
+  }, [editMode]);
 
   // ── 선택 국가 fly-to ──
   useEffect(() => {

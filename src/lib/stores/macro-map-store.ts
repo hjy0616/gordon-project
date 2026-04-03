@@ -5,6 +5,8 @@ import type {
   IndicatorType,
   CountryEditableData,
   RelationType,
+  EditTab,
+  LineStyle,
 } from "@/types/macro-map";
 import { MOCK_RELATIONS } from "@/data/mock-relations";
 import { COUNTRY_CENTROIDS } from "@/data/country-centroids";
@@ -20,19 +22,18 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
     notes: {},
     showFlows: true,
     capitalFlows: [],
-    flowEditMode: false,
-    flowEditBase: null,
-    flowPopover: null,
     showRanking: false,
     showScorecard: false,
     continentTags: {},
     countryEdits: {},
-    // 7단계: 관계선
+    // 관계선
     relations: MOCK_RELATIONS,
     showRelations: false,
-    relationEditMode: false,
-    relationEditBase: null,
-    relationPopover: null,
+    // 통합 편집 모드
+    editMode: false,
+    editBase: null,
+    editPopover: null,
+
     setIndicator: (indicator: IndicatorType) =>
       set({ activeIndicator: indicator }),
 
@@ -54,22 +55,7 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
 
     // ── 자본흐름 CRUD ──
 
-    toggleFlowEditMode: () =>
-      set((state) => ({
-        flowEditMode: !state.flowEditMode,
-        ...(!state.flowEditMode
-          ? {
-              relationEditMode: false,
-              relationEditBase: null,
-              relationPopover: null,
-            }
-          : { flowEditBase: null, flowPopover: null }),
-      })),
-
-    setFlowEditBase: (iso: string | null) =>
-      set({ flowEditBase: iso, flowPopover: null }),
-
-    addFlow: (from, to, type, volume, label) =>
+    addFlow: (from, to, type, volume, label, color, lineStyle) =>
       set((state) => {
         const fromCoords = COUNTRY_CENTROIDS[from];
         const toCoords = COUNTRY_CENTROIDS[to];
@@ -84,11 +70,13 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
           volume,
           type,
           label,
+          color,
+          lineStyle,
         };
         syncToServer("/api/macro-map/flows", "POST", flow);
         return {
           capitalFlows: [...state.capitalFlows, flow],
-          flowPopover: null,
+          editPopover: null,
         };
       }),
 
@@ -97,7 +85,7 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
         capitalFlows: state.capitalFlows.map((f) =>
           f.id === id ? { ...f, ...updates } : f,
         ),
-        flowPopover: null,
+        editPopover: null,
       }));
       syncToServer("/api/macro-map/flows", "PUT", { id, ...updates });
     },
@@ -105,16 +93,10 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
     removeFlow: (id) => {
       set((state) => ({
         capitalFlows: state.capitalFlows.filter((f) => f.id !== id),
-        flowPopover: null,
+        editPopover: null,
       }));
       syncToServer("/api/macro-map/flows", "DELETE", { id });
     },
-
-    showFlowPopover: (x, y, targetIso) =>
-      set({ flowPopover: { x, y, targetIso } }),
-
-    hideFlowPopover: () =>
-      set({ flowPopover: null }),
 
     toggleRanking: () =>
       set((state) => ({
@@ -149,7 +131,6 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
           [iso]: { ...state.countryEdits[iso], [field]: value },
         },
       }));
-      // debounce는 컴포넌트 쪽에서 이미 처리 중
       const state = useMacroMapStore.getState();
       const edit = state.countryEdits[iso];
       if (edit) {
@@ -160,27 +141,12 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
       }
     },
 
-    // ── 7단계: 관계선 액션 ──
+    // ── 관계선 액션 ──
 
     toggleRelations: () =>
       set((state) => ({ showRelations: !state.showRelations })),
 
-    toggleRelationEditMode: () =>
-      set((state) => ({
-        relationEditMode: !state.relationEditMode,
-        ...(!state.relationEditMode
-          ? {
-              flowEditMode: false,
-              flowEditBase: null,
-              flowPopover: null,
-            }
-          : { relationEditBase: null, relationPopover: null }),
-      })),
-
-    setRelationEditBase: (iso: string | null) =>
-      set({ relationEditBase: iso, relationPopover: null }),
-
-    addRelation: (from: string, to: string, type: RelationType) => {
+    addRelation: (from: string, to: string, type: RelationType, color: string, lineStyle: LineStyle) => {
       set((state) => {
         const id1 = `${from}-${to}`;
         const id2 = `${to}-${from}`;
@@ -190,16 +156,18 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
         return {
           relations: [
             ...filtered,
-            { id: id1, from_iso: from, to_iso: to, type },
-            { id: id2, from_iso: to, to_iso: from, type },
+            { id: id1, from_iso: from, to_iso: to, type, color, lineStyle },
+            { id: id2, from_iso: to, to_iso: from, type, color, lineStyle },
           ],
-          relationPopover: null,
+          editPopover: null,
         };
       });
       syncToServer("/api/macro-map/relations", "POST", {
         from_iso: from,
         to_iso: to,
         type,
+        color,
+        lineStyle,
       });
     },
 
@@ -212,7 +180,7 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
         relations: state.relations.filter(
           (r) => r.id !== id && r.id !== reverseId,
         ),
-        relationPopover: null,
+        editPopover: null,
       });
       syncToServer("/api/macro-map/relations", "DELETE", {
         from_iso: rel.from_iso,
@@ -220,10 +188,28 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
       });
     },
 
-    showRelationPopover: (x: number, y: number, targetIso: string) =>
-      set({ relationPopover: { x, y, targetIso } }),
+    // ── 통합 편집 모드 ──
 
-    hideRelationPopover: () =>
-      set({ relationPopover: null }),
+    toggleEditMode: () =>
+      set((state) => ({
+        editMode: !state.editMode,
+        ...(!state.editMode ? {} : { editBase: null, editPopover: null }),
+      })),
+
+    setEditBase: (iso: string | null) =>
+      set({ editBase: iso, editPopover: null }),
+
+    showEditPopover: (x: number, y: number, targetIso: string, activeTab: EditTab) =>
+      set({ editPopover: { x, y, targetIso, activeTab } }),
+
+    hideEditPopover: () =>
+      set({ editPopover: null }),
+
+    setEditTab: (tab: EditTab) =>
+      set((state) =>
+        state.editPopover
+          ? { editPopover: { ...state.editPopover, activeTab: tab } }
+          : {},
+      ),
   }),
 );

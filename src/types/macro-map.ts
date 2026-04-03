@@ -23,6 +23,8 @@ export interface CapitalFlow {
   volume: number;                // 규모 (십억 USD)
   type: "fdi" | "portfolio" | "trade";
   label: string;
+  color: string;                 // 라인 색상 (기본: "#e67e22")
+  lineStyle: LineStyle;          // 실선/점선 (기본: "dashed")
 }
 
 export type CountryNotes = Record<string, string>;
@@ -35,19 +37,29 @@ export interface CountryRelation {
   from_iso: string;
   to_iso: string;
   type: RelationType;
+  color: string;        // 라인 색상 (기본: ally="#3b82f6", rival="#800020")
+  lineStyle: LineStyle;  // 실선/점선 (기본: ally="solid", rival="dashed")
 }
 
-export interface RelationPopoverState {
+export type EditTab = "flow" | "relation";
+export type LineStyle = "solid" | "dashed";
+
+export interface EditPopoverState {
   x: number;
   y: number;
   targetIso: string;
+  activeTab: EditTab;
 }
 
-export interface FlowPopoverState {
-  x: number;
-  y: number;
-  targetIso: string;
-}
+export const LINE_COLOR_PRESETS = [
+  { value: "#e67e22", label: "주황" },
+  { value: "#3b82f6", label: "파랑" },
+  { value: "#800020", label: "다크레드" },
+  { value: "#22c55e", label: "초록" },
+  { value: "#a855f7", label: "보라" },
+  { value: "#eab308", label: "노랑" },
+  { value: "#94a3b8", label: "회색" },
+] as const;
 
 /** 5대 핵심 능력 — 각 카테고리당 3개 텍스트 */
 export type CapabilityEntries = [string, string, string];
@@ -124,15 +136,13 @@ export interface MacroMapState {
   countryEdits: CountryEdits;
   // 자본흐름 CRUD
   capitalFlows: CapitalFlow[];
-  flowEditMode: boolean;
-  flowEditBase: string | null;
-  flowPopover: FlowPopoverState | null;
   // 7단계: 관계선
   relations: CountryRelation[];
   showRelations: boolean;
-  relationEditMode: boolean;
-  relationEditBase: string | null;
-  relationPopover: RelationPopoverState | null;
+  // 통합 편집 모드
+  editMode: boolean;
+  editBase: string | null;
+  editPopover: EditPopoverState | null;
 }
 
 export interface MacroMapActions {
@@ -150,21 +160,19 @@ export interface MacroMapActions {
     value: CountryEditableData[K],
   ) => void;
   // 자본흐름 CRUD
-  toggleFlowEditMode: () => void;
-  setFlowEditBase: (iso: string | null) => void;
-  addFlow: (from: string, to: string, type: CapitalFlow["type"], volume: number, label: string) => void;
-  updateFlow: (id: string, updates: Partial<Pick<CapitalFlow, "type" | "volume" | "label">>) => void;
+  addFlow: (from: string, to: string, type: CapitalFlow["type"], volume: number, label: string, color: string, lineStyle: LineStyle) => void;
+  updateFlow: (id: string, updates: Partial<Pick<CapitalFlow, "type" | "volume" | "label" | "color" | "lineStyle">>) => void;
   removeFlow: (id: string) => void;
-  showFlowPopover: (x: number, y: number, targetIso: string) => void;
-  hideFlowPopover: () => void;
-  // 7단계: 관계선
+  // 관계선
   toggleRelations: () => void;
-  toggleRelationEditMode: () => void;
-  setRelationEditBase: (iso: string | null) => void;
-  addRelation: (from: string, to: string, type: RelationType) => void;
+  addRelation: (from: string, to: string, type: RelationType, color: string, lineStyle: LineStyle) => void;
   removeRelation: (id: string) => void;
-  showRelationPopover: (x: number, y: number, targetIso: string) => void;
-  hideRelationPopover: () => void;
+  // 통합 편집 모드
+  toggleEditMode: () => void;
+  setEditBase: (iso: string | null) => void;
+  showEditPopover: (x: number, y: number, targetIso: string, activeTab: EditTab) => void;
+  hideEditPopover: () => void;
+  setEditTab: (tab: EditTab) => void;
 }
 
 export const INDICATOR_CONFIG: Record<

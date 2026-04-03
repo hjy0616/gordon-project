@@ -1,6 +1,9 @@
 import type { CapitalFlow } from "@/types/macro-map";
 import { COUNTRY_CENTROIDS } from "./country-centroids";
 
+const DEFAULT_FLOW_COLOR = "#e67e22";
+const DEFAULT_FLOW_STYLE = "dashed" as const;
+
 export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
   {
     id: "us-cn-trade",
@@ -11,6 +14,8 @@ export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
     volume: 300,
     type: "trade",
     label: "미중 무역",
+    color: DEFAULT_FLOW_COLOR,
+    lineStyle: DEFAULT_FLOW_STYLE,
   },
   {
     id: "cn-us-trade",
@@ -21,6 +26,8 @@ export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
     volume: 420,
     type: "trade",
     label: "중미 무역",
+    color: DEFAULT_FLOW_COLOR,
+    lineStyle: DEFAULT_FLOW_STYLE,
   },
   {
     id: "jp-us-portfolio",
@@ -31,6 +38,8 @@ export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
     volume: 180,
     type: "portfolio",
     label: "일본→미국 포트폴리오",
+    color: DEFAULT_FLOW_COLOR,
+    lineStyle: DEFAULT_FLOW_STYLE,
   },
   {
     id: "us-eu-fdi",
@@ -41,6 +50,8 @@ export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
     volume: 150,
     type: "fdi",
     label: "미국→유럽 FDI",
+    color: DEFAULT_FLOW_COLOR,
+    lineStyle: DEFAULT_FLOW_STYLE,
   },
   {
     id: "cn-sea-fdi",
@@ -51,6 +62,8 @@ export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
     volume: 85,
     type: "fdi",
     label: "중국→동남아 FDI",
+    color: DEFAULT_FLOW_COLOR,
+    lineStyle: DEFAULT_FLOW_STYLE,
   },
   {
     id: "jp-tha-fdi",
@@ -61,6 +74,8 @@ export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
     volume: 60,
     type: "fdi",
     label: "일본→태국 FDI",
+    color: DEFAULT_FLOW_COLOR,
+    lineStyle: DEFAULT_FLOW_STYLE,
   },
   {
     id: "sau-ind-trade",
@@ -71,6 +86,8 @@ export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
     volume: 95,
     type: "trade",
     label: "사우디→인도 원유",
+    color: DEFAULT_FLOW_COLOR,
+    lineStyle: DEFAULT_FLOW_STYLE,
   },
   {
     id: "aus-cn-trade",
@@ -81,6 +98,8 @@ export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
     volume: 120,
     type: "trade",
     label: "호주→중국 자원",
+    color: DEFAULT_FLOW_COLOR,
+    lineStyle: DEFAULT_FLOW_STYLE,
   },
   {
     id: "kor-vnm-fdi",
@@ -91,6 +110,8 @@ export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
     volume: 45,
     type: "fdi",
     label: "한국→베트남 FDI",
+    color: DEFAULT_FLOW_COLOR,
+    lineStyle: DEFAULT_FLOW_STYLE,
   },
   {
     id: "bra-cn-trade",
@@ -101,6 +122,8 @@ export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
     volume: 110,
     type: "trade",
     label: "브라질→중국 농산물",
+    color: DEFAULT_FLOW_COLOR,
+    lineStyle: DEFAULT_FLOW_STYLE,
   },
   {
     id: "gbr-us-portfolio",
@@ -111,6 +134,8 @@ export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
     volume: 200,
     type: "portfolio",
     label: "영국→미국 포트폴리오",
+    color: DEFAULT_FLOW_COLOR,
+    lineStyle: DEFAULT_FLOW_STYLE,
   },
   {
     id: "cn-ngr-fdi",
@@ -121,5 +146,7 @@ export const MOCK_CAPITAL_FLOWS: CapitalFlow[] = [
     volume: 35,
     type: "fdi",
     label: "중국→나이지리아 인프라",
+    color: DEFAULT_FLOW_COLOR,
+    lineStyle: DEFAULT_FLOW_STYLE,
   },
 ];

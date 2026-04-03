@@ -18,9 +18,29 @@
     > [!NOTE]
     > 현재 macro-map 페이지에서 지도에 데이터를 못가져오는 게 존재합니다.
     > 1. 기준금리, 2. 국가 채무, 3. 군사력 순위, 4. 핵신산업, 5. 기술력
+    > 
     > 위 데이터들을 못가져오게 되었어서 dummy 데이터이기 때문에 꼭 본인이 확인해주세요.
     > 산업 및 군사력 부분은 언제든지 작업해서 저장하고 불러올 수 있으니까 참고!
+    
+    1. 세계경제 과제 사용법
+        
+        - 이미지 참고
+        
+        <p align="center">
+            <img src="./public/tutorial/image.png" alt="로고" width="200" />
+        </p>
+        
+        - 위 이미지 처럼 상단에 버튼이 있음
+        - 편집버튼을 누르면 관계 혹은 라인들 설정가능
+        - 옆에 자본흐름 버튼과 관계선 버튼을 누르면 on/off 가능
 
+        <p align="center">
+            <img src="./public/tutorial/image1.png" alt="로고" width="200" />
+        </p>
+
+        <p align="center">
+            <img src="./public/tutorial/image2.png" alt="로고" width="200" />
+        </p>
 
 
 
