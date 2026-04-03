@@ -75,22 +75,22 @@ export default function LasagnaView() {
         </div>
       </div>
 
-      {/* Toggle button */}
-      <button
-        type="button"
-        onClick={() => setPanelCollapsed((p) => !p)}
-        className="absolute top-3 z-10 flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground"
-        style={{ left: panelCollapsed ? 8 : "calc(min(30%, 400px) - 32px)" }}
-      >
-        {panelCollapsed ? (
-          <PanelLeftOpen className="size-4" />
-        ) : (
-          <PanelLeftClose className="size-4" />
-        )}
-      </button>
-
       {/* Main content */}
-      <div className="flex-1 overflow-hidden">{mainContent}</div>
+      <div className="relative flex-1 overflow-hidden">
+        {/* Toggle button — inside main area, top-left */}
+        <button
+          type="button"
+          onClick={() => setPanelCollapsed((p) => !p)}
+          className="absolute left-2 top-3 z-10 flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground"
+        >
+          {panelCollapsed ? (
+            <PanelLeftOpen className="size-4" />
+          ) : (
+            <PanelLeftClose className="size-4" />
+          )}
+        </button>
+        {mainContent}
+      </div>
     </div>
   );
 }
