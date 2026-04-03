@@ -6,11 +6,24 @@ import { useLasagnaStore } from "@/lib/stores/lasagna-store";
 import { STEP_CONFIG, STEP_PROMPTS } from "@/types/lasagna";
 import type { Simulation } from "@/types/lasagna";
 import React from "react";
+import { StepDomain } from "./step-domain";
+import { StepCause } from "./step-cause";
+import { StepAmplifier } from "./step-amplifier";
+import { StepCondition } from "./step-condition";
+import { StepReversibility } from "./step-reversibility";
+import { StepAction } from "./step-action";
 
 const STEP_COMPONENTS: Record<
   number,
   React.ComponentType<{ simulation: Simulation }>
-> = {};
+> = {
+  1: StepDomain,
+  2: StepCause,
+  3: StepAmplifier,
+  5: StepCondition,
+  7: StepReversibility,
+  8: StepAction,
+};
 
 interface StepContainerProps {
   simulation: Simulation;
