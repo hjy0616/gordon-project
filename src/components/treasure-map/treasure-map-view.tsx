@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { MapContainer } from "./map-container";
 import { MapLegend } from "./map-legend";
 import { DistrictPanel } from "./district-panel";
@@ -20,14 +21,16 @@ export function TreasureMapView() {
   const districtOverrides = useTreasureMapStore((s) => s.districtOverrides);
   const createStep = useTreasureMapStore((s) => s.createStep);
 
+  const [mobileListOpen, setMobileListOpen] = useState(false);
+
   const hasSelectedDistrict =
     selectedDistrict &&
     !!resolveDistrict(selectedDistrict, customDistricts, districtOverrides);
 
-  // Mobile sheet opens for: selected district, list mode, or create form step
+  // Mobile sheet opens for: selected district, explicit list open, or create form step
   const sheetOpen = isMobile
     ? !!hasSelectedDistrict ||
-      panelMode === "list" ||
+      mobileListOpen ||
       (panelMode === "create" && createStep === "form")
     : false;
 
@@ -54,7 +57,7 @@ export function TreasureMapView() {
       </div>
 
       {/* Mobile FAB */}
-      {showFab && <MobileFab />}
+      {showFab && <MobileFab onOpenList={() => setMobileListOpen(true)} />}
 
       {/* Mobile locate bar (create step 1) */}
       {showLocateBar && <MobileLocateBar />}
@@ -66,7 +69,7 @@ export function TreasureMapView() {
           onOpenChange={(open) => {
             if (!open) {
               selectDistrict(null);
-              setPanelMode("list");
+              setMobileListOpen(false);
             }
           }}
         >

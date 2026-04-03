@@ -3,7 +3,7 @@
 import { List, Plus } from "lucide-react";
 import { useTreasureMapStore } from "@/lib/stores/treasure-map-store";
 
-export function MobileFab() {
+export function MobileFab({ onOpenList }: { onOpenList: () => void }) {
   const setPanelMode = useTreasureMapStore((s) => s.setPanelMode);
 
   return (
@@ -16,7 +16,10 @@ export function MobileFab() {
         <Plus className="h-5 w-5" />
       </button>
       <button
-        onClick={() => setPanelMode("list")}
+        onClick={() => {
+          setPanelMode("list");
+          onOpenList();
+        }}
         className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-background/90 shadow-lg backdrop-blur-sm transition-colors active:bg-muted"
         aria-label="지역 목록"
       >
