@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ChevronsUpDown,
   Globe,
+  Layers,
   LayoutDashboard,
   LogOut,
   Map,
@@ -187,6 +188,17 @@ export function AppSidebar() {
                   </CollapsibleContent>
                 </SidebarMenuItem>
               </Collapsible>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={pathname === "/lasagna"}
+                  tooltip="Lasagna"
+                  render={<Link href="/lasagna" />}
+                >
+                  <Layers />
+                  <span>Lasagna</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
