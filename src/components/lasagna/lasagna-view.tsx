@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { List, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { List, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -68,29 +68,29 @@ export default function LasagnaView() {
       {/* Side panel — collapsible */}
       <div
         className="shrink-0 overflow-hidden border-r transition-[width] duration-200"
-        style={{ width: panelCollapsed ? 0 : "min(30%, 400px)", borderRightWidth: panelCollapsed ? 0 : undefined }}
+        style={{
+          width: panelCollapsed ? 0 : "min(30%, 400px)",
+          borderRightWidth: panelCollapsed ? 0 : undefined,
+        }}
       >
         <div className="h-full min-w-[280px] overflow-hidden">
-          <SimulationPanel />
+          <SimulationPanel onCollapse={() => setPanelCollapsed(true)} />
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="relative flex-1 overflow-hidden">
-        {/* Toggle button — inside main area, top-left */}
+      {/* Expand handle — thin strip on the left edge, only when collapsed */}
+      {panelCollapsed && (
         <button
           type="button"
-          onClick={() => setPanelCollapsed((p) => !p)}
-          className="absolute left-2 top-3 z-10 flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground"
+          onClick={() => setPanelCollapsed(false)}
+          className="flex w-6 shrink-0 items-center justify-center border-r bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
-          {panelCollapsed ? (
-            <PanelLeftOpen className="size-4" />
-          ) : (
-            <PanelLeftClose className="size-4" />
-          )}
+          <PanelLeftOpen className="size-3.5" />
         </button>
-        {mainContent}
-      </div>
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 overflow-hidden">{mainContent}</div>
     </div>
   );
 }
