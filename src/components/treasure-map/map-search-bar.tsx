@@ -46,7 +46,7 @@ export function MapSearchBar({ onSelect }: MapSearchBarProps) {
   return (
     <div
       ref={containerRef}
-      className="absolute top-4 left-1/2 z-20 w-[min(400px,calc(100%-2rem))] -translate-x-1/2"
+      className="absolute top-4 left-1/2 z-20 w-[min(400px,calc(100%-1.5rem))] -translate-x-1/2"
     >
       <div className="overflow-hidden rounded-lg border border-border bg-card shadow-lg">
         {/* Input */}

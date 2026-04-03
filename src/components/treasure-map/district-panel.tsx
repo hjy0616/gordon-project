@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useTreasureMapStore } from "@/lib/stores/treasure-map-store";
 import { resolveDistrict, isCustomDistrict } from "@/lib/treasure-map-utils";
 import {
@@ -25,6 +26,7 @@ const MAIN_TABS: { key: MainTabType; label: string }[] = [
 ];
 
 export function DistrictPanel() {
+  const isMobile = useIsMobile();
   const selectedDistrict = useTreasureMapStore((s) => s.selectedDistrict);
   const activeMainTab = useTreasureMapStore((s) => s.activeMainTab);
   const setMainTab = useTreasureMapStore((s) => s.setMainTab);
@@ -86,6 +88,8 @@ export function DistrictPanel() {
               key={tab.key}
               onClick={() => setMainTab(tab.key)}
               className={`px-3 py-2.5 text-xs font-medium transition-colors ${
+                isMobile ? "min-h-[44px]" : ""
+              } ${
                 activeMainTab === tab.key
                   ? "rounded-t-md bg-[#A71C2E] text-white"
                   : "text-muted-foreground hover:text-foreground"

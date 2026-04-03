@@ -46,6 +46,9 @@ interface TreasureMapState {
     region: string;
     searchQuery: string;
   } | null;
+
+  // Mobile create flow step
+  createStep: "locate" | "form" | null;
 }
 
 interface TreasureMapActions {
@@ -94,6 +97,7 @@ interface TreasureMapActions {
   resetAllToDefaults: () => void;
 
   setPanelMode: (mode: PanelMode) => void;
+  setCreateStep: (step: "locate" | "form" | null) => void;
   setCreateDraft: (draft: {
     lat: number;
     lng: number;
@@ -145,6 +149,7 @@ export const useTreasureMapStore = create<
     deletedMockIds: [],
     panelMode: "list",
     createDraft: null,
+    createStep: null,
 
     selectDistrict: (id) =>
       set({ selectedDistrict: id, panelMode: id ? "view" : "list" }),
@@ -256,6 +261,7 @@ export const useTreasureMapStore = create<
           customDistricts: [...state.customDistricts, newDistrict],
           selectedDistrict: id,
           panelMode: "view",
+          createStep: null,
         };
       }),
 
@@ -350,10 +356,13 @@ export const useTreasureMapStore = create<
     setPanelMode: (mode) =>
       set({
         panelMode: mode,
-        ...(mode !== "create" ? { createDraft: null } : {}),
+        ...(mode === "create"
+          ? { createStep: "locate" as const }
+          : { createDraft: null, createStep: null }),
       }),
 
+    setCreateStep: (step) => set({ createStep: step }),
     setCreateDraft: (draft) => set({ createDraft: draft }),
-    clearCreateDraft: () => set({ createDraft: null }),
+    clearCreateDraft: () => set({ createDraft: null, createStep: null }),
   }),
 );

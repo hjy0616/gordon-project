@@ -80,7 +80,7 @@ export function DistrictCreateForm() {
             </div>
           ) : (
             <div className="rounded-md border border-dashed border-border px-3 py-3 text-center text-xs text-muted-foreground">
-              지도 상단 검색바에서 위치를 검색해주세요
+              지도에서 위치를 먼저 선택해주세요
             </div>
           )}
         </div>

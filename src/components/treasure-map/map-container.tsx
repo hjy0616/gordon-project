@@ -7,6 +7,7 @@ import { useTreasureMapStore } from "@/lib/stores/treasure-map-store";
 import { TIER_COLORS } from "@/types/treasure-map";
 import { reverseGeocode, parseKoreanAddress } from "@/lib/nominatim";
 import { MapSearchBar } from "./map-search-bar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { SearchResultItem } from "@/hooks/use-nominatim-search";
 
 const MAP_STYLES = {
@@ -41,10 +42,12 @@ export function MapContainer() {
   const draftMarkerRef = useRef<maplibregl.Marker | null>(null);
   const { resolvedTheme } = useTheme();
 
+  const isMobile = useIsMobile();
   const selectedDistrict = useTreasureMapStore((s) => s.selectedDistrict);
   const customDistricts = useTreasureMapStore((s) => s.customDistricts);
   const deletedMockIds = useTreasureMapStore((s) => s.deletedMockIds);
   const panelMode = useTreasureMapStore((s) => s.panelMode);
+  const createStep = useTreasureMapStore((s) => s.createStep);
 
   const addCustomLayers = useCallback((map: maplibregl.Map) => {
     if (map.getSource("korea-districts")) return;
@@ -485,12 +488,16 @@ export function MapContainer() {
     }
   }, [panelMode]);
 
+  // Desktop: show search bar in create mode
+  // Mobile: show search bar only in create locate step
+  const showSearchBar = isMobile
+    ? panelMode === "create" && createStep === "locate"
+    : panelMode === "create";
+
   return (
     <div className="absolute inset-0">
       <div ref={containerRef} className="h-full w-full" />
-      {panelMode === "create" && (
-        <MapSearchBar onSelect={handleSearchSelect} />
-      )}
+      {showSearchBar && <MapSearchBar onSelect={handleSearchSelect} />}
     </div>
   );
 }
