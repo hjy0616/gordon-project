@@ -13,7 +13,7 @@ export function StepperNav({ simulation }: StepperNavProps) {
   const goToStep = useLasagnaStore((s) => s.goToStep);
 
   return (
-    <div className="flex items-center gap-0 overflow-x-auto px-4 py-3">
+    <div className="min-w-0 flex items-center gap-0 overflow-x-auto px-4 py-3">
       {STEP_CONFIG.map((step, idx) => {
         const isCompleted = simulation.steps[step.num]?.completed;
         const isCurrent = simulation.currentStep === step.num;

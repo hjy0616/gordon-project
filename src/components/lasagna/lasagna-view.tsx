@@ -25,7 +25,7 @@ export default function LasagnaView() {
 
   const mainContent = simulation ? (
     mainView === "stepper" ? (
-      <div className="flex h-full flex-col">
+      <div className="flex h-full min-w-0 flex-col overflow-hidden">
         <StepperNav simulation={simulation} />
         <StepContainer simulation={simulation} />
       </div>
@@ -42,7 +42,7 @@ export default function LasagnaView() {
 
   if (isMobile) {
     return (
-      <div className="relative -m-6 flex h-[calc(100svh-3rem)] w-[calc(100%+3rem)] overflow-hidden">
+      <div className="-m-6 flex h-[calc(100svh-3rem)] w-[calc(100%+3rem)] overflow-hidden">
         <Button
           variant="outline"
           size="icon"
@@ -64,7 +64,7 @@ export default function LasagnaView() {
   }
 
   return (
-    <div className="relative -m-6 flex h-[calc(100svh-3rem)] w-[calc(100%+3rem)] overflow-hidden">
+    <div className="-m-6 flex h-[calc(100svh-3rem)] w-[calc(100%+3rem)] overflow-hidden">
       {/* Side panel — collapsible */}
       <div
         className="shrink-0 overflow-hidden border-r transition-[width] duration-200"
@@ -90,7 +90,7 @@ export default function LasagnaView() {
       )}
 
       {/* Main content */}
-      <div className="flex-1 overflow-hidden">{mainContent}</div>
+      <div className="min-w-0 flex-1 overflow-hidden">{mainContent}</div>
     </div>
   );
 }
