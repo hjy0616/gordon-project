@@ -1,15 +1,27 @@
 "use client";
 
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, useReactFlow } from "@xyflow/react";
 import type { FlowNodeData } from "@/types/lasagna";
+import { EditableLabel } from "./editable-label";
 
-export function TransmissionNode({ data }: { data: FlowNodeData }) {
+export function TransmissionNode({ id, data }: { id: string; data: FlowNodeData }) {
+  const { setNodes } = useReactFlow();
+
+  function handleLabelChange(label: string) {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, label } } : n,
+      ),
+    );
+  }
+
   return (
-    <div className="rounded-lg border-2 border-border bg-card px-4 py-2 shadow-md">
-      <p className="text-sm font-bold text-foreground">{data.label}</p>
-      {data.description && (
-        <p className="mt-0.5 text-xs text-muted-foreground">{data.description}</p>
-      )}
+    <div className="min-w-[80px] rounded-lg border-2 border-border bg-card px-4 py-2 shadow-md">
+      <EditableLabel
+        value={data.label}
+        onChange={handleLabelChange}
+        className="text-center text-sm font-bold text-foreground"
+      />
       <Handle type="source" position={Position.Bottom} className="!bg-muted-foreground" />
       <Handle type="target" position={Position.Top} className="!bg-muted-foreground" />
     </div>

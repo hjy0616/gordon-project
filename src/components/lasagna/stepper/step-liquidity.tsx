@@ -21,7 +21,9 @@ export function StepLiquidity({ simulation }: StepLiquidityProps) {
         어디서 빠져나와 어디로 가는지 흐름을 시각화합니다.
       </p>
 
-      <FlowCanvas simulation={simulation} mode="liquidity" />
+      <div className="h-[380px] overflow-hidden rounded-md border md:h-[420px]">
+        <FlowCanvas simulation={simulation} mode="liquidity" />
+      </div>
 
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-muted-foreground">

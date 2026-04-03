@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
   ReactFlow,
   Background,
@@ -12,11 +12,9 @@ import {
   type Connection,
   type Node,
   type Edge,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useLasagnaStore } from "@/lib/stores/lasagna-store";
 import type { Simulation, SimFlowNode, SimFlowEdge } from "@/types/lasagna";
 import { EventNode } from "./event-node";
@@ -80,6 +78,7 @@ interface FlowCanvasProps {
 export function FlowCanvas({ simulation, mode }: FlowCanvasProps) {
   const updateFlowNodes = useLasagnaStore((s) => s.updateFlowNodes);
   const updateFlowEdges = useLasagnaStore((s) => s.updateFlowEdges);
+  const rfInstance = useRef<ReactFlowInstance | null>(null);
 
   const initialNodes = useMemo(
     () => toFlowNodes(simulation.flowNodes),
@@ -94,7 +93,6 @@ export function FlowCanvas({ simulation, mode }: FlowCanvasProps) {
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [newLabel, setNewLabel] = useState("");
   const rafRef = useRef<number | null>(null);
 
   const persistNodes = useCallback(
@@ -154,78 +152,72 @@ export function FlowCanvas({ simulation, mode }: FlowCanvasProps) {
     [mode, setEdges, persistEdges],
   );
 
-  const handleAddNode = useCallback(() => {
-    const label = newLabel.trim();
-    if (!label) return;
+  const handlePaneDoubleClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (mode === "readonly" || !rfInstance.current) return;
 
-    const nodeType = mode === "liquidity" ? "liquidity" : "transmission";
-    const newNode: Node = {
-      id: `${nodeType}-${Date.now()}`,
-      type: nodeType,
-      position: {
-        x: 200 + Math.random() * 200,
-        y: 150 + nodes.length * 80,
-      },
-      data: { label },
-    };
+      const bounds = (
+        event.currentTarget as HTMLElement
+      ).getBoundingClientRect();
+      const position = rfInstance.current.screenToFlowPosition({
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
+      });
 
-    setNodes((nds) => {
-      const updated = [...nds, newNode];
-      persistNodes(updated);
-      return updated;
-    });
-    setNewLabel("");
-  }, [newLabel, mode, nodes.length, setNodes, persistNodes]);
+      const nodeType = mode === "liquidity" ? "liquidity" : "transmission";
+      const newNode: Node = {
+        id: `${nodeType}-${Date.now()}`,
+        type: nodeType,
+        position,
+        data: { label: "새 노드" },
+      };
+
+      setNodes((nds) => {
+        const updated = [...nds, newNode];
+        persistNodes(updated);
+        return updated;
+      });
+    },
+    [mode, setNodes, persistNodes],
+  );
 
   const isReadonly = mode === "readonly";
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="relative h-full w-full">
       {!isReadonly && (
-        <div className="flex items-center gap-2">
-          <Input
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleAddNode();
-            }}
-            placeholder={
-              mode === "liquidity"
-                ? "유동성 노드 이름..."
-                : "전이 경로 노드 이름..."
-            }
-            className="h-8 text-sm"
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleAddNode}
-            disabled={!newLabel.trim()}
-            className="h-8 shrink-0"
-          >
-            <Plus className="mr-1 size-3.5" />
-            추가
-          </Button>
+        <div className="absolute left-3 top-3 z-10 rounded-md border bg-background/80 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm">
+          캔버스 더블클릭 → 노드 추가 · 노드 더블클릭 → 이름 수정 · Delete → 삭제
         </div>
       )}
-
-      <div className="h-[400px] md:h-[450px] rounded-md border bg-background">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={isReadonly ? undefined : handleNodesChange}
-          onEdgesChange={isReadonly ? undefined : handleEdgesChange}
-          onConnect={isReadonly ? undefined : onConnect}
-          nodeTypes={nodeTypes}
-          deleteKeyCode={isReadonly ? null : "Backspace"}
-          fitView
-          className="bg-background"
-        >
-          <Background />
-          <Controls />
-          <MiniMap zoomable pannable />
-        </ReactFlow>
-      </div>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={isReadonly ? undefined : handleNodesChange}
+        onEdgesChange={isReadonly ? undefined : handleEdgesChange}
+        onConnect={isReadonly ? undefined : onConnect}
+        onInit={(instance) => {
+          rfInstance.current = instance;
+        }}
+        onDoubleClick={isReadonly ? undefined : handlePaneDoubleClick}
+        nodeTypes={nodeTypes}
+        deleteKeyCode={isReadonly ? null : ["Backspace", "Delete"]}
+        fitView
+        className="bg-background [&_.react-flow__controls]:border [&_.react-flow__controls]:bg-card [&_.react-flow__controls]:shadow-md [&_.react-flow__controls_button]:border-border [&_.react-flow__controls_button]:bg-card [&_.react-flow__controls_button]:fill-foreground [&_.react-flow__controls_button:hover]:bg-accent [&_.react-flow__minimap]:border [&_.react-flow__minimap]:bg-card [&_.react-flow__minimap]:shadow-md"
+      >
+        <Background />
+        <Controls />
+        <MiniMap
+          zoomable
+          pannable
+          nodeColor={(node) => {
+            if (node.type === "event") return "oklch(0.7 0.17 55)";
+            if (node.type === "liquidity") return "#22c55e";
+            return "oklch(0.5 0 0)";
+          }}
+          maskColor="oklch(0.15 0 0 / 70%)"
+        />
+      </ReactFlow>
     </div>
   );
 }
