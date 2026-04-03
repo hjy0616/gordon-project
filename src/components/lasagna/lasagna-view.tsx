@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { List } from "lucide-react";
+import { List, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -14,6 +14,7 @@ import { SummaryView } from "./summary/summary-view";
 export default function LasagnaView() {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
 
   const simulations = useLasagnaStore((s) => s.simulations);
   const selectedSimulationId = useLasagnaStore((s) => s.selectedSimulationId);
@@ -28,8 +29,6 @@ export default function LasagnaView() {
         <StepperNav simulation={simulation} />
         <StepContainer simulation={simulation} />
       </div>
-    ) : mainView === "mindmap" ? (
-      <SummaryView simulation={simulation} />
     ) : (
       <SummaryView simulation={simulation} />
     )
@@ -66,13 +65,32 @@ export default function LasagnaView() {
 
   return (
     <div className="relative -m-6 flex h-[calc(100svh-3rem)] w-[calc(100%+3rem)] overflow-hidden">
-      {/* Side panel */}
-      <div className="w-[30%] min-w-[280px] max-w-[400px] shrink-0 border-r">
-        <SimulationPanel />
+      {/* Side panel — collapsible */}
+      <div
+        className="shrink-0 border-r transition-[width] duration-200"
+        style={{ width: panelCollapsed ? 0 : "min(30%, 400px)" }}
+      >
+        <div className="h-full min-w-[280px] overflow-hidden">
+          <SimulationPanel />
+        </div>
       </div>
 
+      {/* Toggle button */}
+      <button
+        type="button"
+        onClick={() => setPanelCollapsed((p) => !p)}
+        className="absolute top-3 z-10 flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground"
+        style={{ left: panelCollapsed ? 8 : "calc(min(30%, 400px) - 32px)" }}
+      >
+        {panelCollapsed ? (
+          <PanelLeftOpen className="size-4" />
+        ) : (
+          <PanelLeftClose className="size-4" />
+        )}
+      </button>
+
       {/* Main content */}
-      <div className="flex-1">{mainContent}</div>
+      <div className="flex-1 overflow-hidden">{mainContent}</div>
     </div>
   );
 }
