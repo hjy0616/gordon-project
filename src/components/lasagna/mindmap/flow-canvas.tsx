@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ReactFlow,
   Background,
@@ -84,7 +84,6 @@ export function FlowCanvas({ simulation, mode }: FlowCanvasProps) {
     if (simulation.flowNodes.length > 0) {
       return toFlowNodes(simulation.flowNodes);
     }
-    // Auto-create event root node if empty and not readonly
     if (mode !== "readonly") {
       const rootNode: SimFlowNode = {
         id: "event-root",
@@ -92,8 +91,6 @@ export function FlowCanvas({ simulation, mode }: FlowCanvasProps) {
         position: { x: 250, y: 50 },
         data: { label: simulation.title },
       };
-      // Persist to store immediately
-      updateFlowNodes(simulation.id, [rootNode]);
       return toFlowNodes([rootNode]);
     }
     return [];
@@ -106,6 +103,14 @@ export function FlowCanvas({ simulation, mode }: FlowCanvasProps) {
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+
+  // Persist auto-created root node to store after mount
+  useEffect(() => {
+    if (simulation.flowNodes.length === 0 && initialNodes.length > 0) {
+      updateFlowNodes(simulation.id, toSimNodes(initialNodes));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simulation.id]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const rafRef = useRef<number | null>(null);
 
