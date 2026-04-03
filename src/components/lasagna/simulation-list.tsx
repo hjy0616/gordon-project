@@ -58,15 +58,23 @@ export function SimulationList() {
         const isSelected = selectedSimulationId === sim.id;
 
         return (
-          <button
+          <div
             key={sim.id}
-            type="button"
+            role="button"
+            tabIndex={0}
             onClick={() => {
               selectSimulation(sim.id);
               setMainView("stepper");
             }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                selectSimulation(sim.id);
+                setMainView("stepper");
+              }
+            }}
             className={cn(
-              "group relative flex flex-col gap-2 rounded-lg border p-3 text-left transition-colors",
+              "group relative flex cursor-pointer flex-col gap-2 rounded-lg border p-3 text-left transition-colors",
               isSelected
                 ? "border-primary bg-primary/5"
                 : "border-border hover:border-primary/40",
@@ -98,7 +106,7 @@ export function SimulationList() {
                 {sim.currentStep}/8
               </span>
             </div>
-          </button>
+          </div>
         );
       })}
     </div>
