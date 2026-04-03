@@ -9,7 +9,9 @@ import React from "react";
 import { StepDomain } from "./step-domain";
 import { StepCause } from "./step-cause";
 import { StepAmplifier } from "./step-amplifier";
+import { StepTransmission } from "./step-transmission";
 import { StepCondition } from "./step-condition";
+import { StepLiquidity } from "./step-liquidity";
 import { StepReversibility } from "./step-reversibility";
 import { StepAction } from "./step-action";
 
@@ -20,7 +22,9 @@ const STEP_COMPONENTS: Record<
   1: StepDomain,
   2: StepCause,
   3: StepAmplifier,
+  4: StepTransmission,
   5: StepCondition,
+  6: StepLiquidity,
   7: StepReversibility,
   8: StepAction,
 };
