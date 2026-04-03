@@ -16,7 +16,7 @@ export function StepTransmission({ simulation }: StepTransmissionProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="h-[380px] overflow-hidden rounded-md border md:h-[420px]">
-        <FlowCanvas simulation={simulation} mode="transmission" />
+        <FlowCanvas key={simulation.id} simulation={simulation} mode="transmission" />
       </div>
 
       <div className="space-y-1.5">

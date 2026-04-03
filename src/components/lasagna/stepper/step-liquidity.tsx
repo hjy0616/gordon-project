@@ -22,7 +22,7 @@ export function StepLiquidity({ simulation }: StepLiquidityProps) {
       </p>
 
       <div className="h-[380px] overflow-hidden rounded-md border md:h-[420px]">
-        <FlowCanvas simulation={simulation} mode="liquidity" />
+        <FlowCanvas key={simulation.id} simulation={simulation} mode="liquidity" />
       </div>
 
       <div className="space-y-1.5">
