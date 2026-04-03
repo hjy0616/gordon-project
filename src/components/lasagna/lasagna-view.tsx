@@ -67,8 +67,8 @@ export default function LasagnaView() {
     <div className="relative -m-6 flex h-[calc(100svh-3rem)] w-[calc(100%+3rem)] overflow-hidden">
       {/* Side panel — collapsible */}
       <div
-        className="shrink-0 border-r transition-[width] duration-200"
-        style={{ width: panelCollapsed ? 0 : "min(30%, 400px)" }}
+        className="shrink-0 overflow-hidden border-r transition-[width] duration-200"
+        style={{ width: panelCollapsed ? 0 : "min(30%, 400px)", borderRightWidth: panelCollapsed ? 0 : undefined }}
       >
         <div className="h-full min-w-[280px] overflow-hidden">
           <SimulationPanel />
