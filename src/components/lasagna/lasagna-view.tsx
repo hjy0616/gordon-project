@@ -9,6 +9,7 @@ import { useLasagnaStore } from "@/lib/stores/lasagna-store";
 import { SimulationPanel } from "./simulation-panel";
 import { StepperNav } from "./stepper/stepper-nav";
 import { StepContainer } from "./stepper/step-container";
+import { SummaryView } from "./summary/summary-view";
 
 export default function LasagnaView() {
   const isMobile = useIsMobile();
@@ -28,13 +29,9 @@ export default function LasagnaView() {
         <StepContainer simulation={simulation} />
       </div>
     ) : mainView === "mindmap" ? (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-sm text-muted-foreground">Mind Map (준비 중)</p>
-      </div>
+      <SummaryView simulation={simulation} />
     ) : (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-sm text-muted-foreground">Summary (준비 중)</p>
-      </div>
+      <SummaryView simulation={simulation} />
     )
   ) : (
     <div className="flex h-full items-center justify-center">
