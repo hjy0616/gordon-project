@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLasagnaSync } from "@/lib/hooks/use-lasagna-sync";
 
 const LasagnaView = dynamic(
   () => import("@/components/lasagna/lasagna-view"),
@@ -16,5 +17,6 @@ const LasagnaView = dynamic(
 );
 
 export default function LasagnaPage() {
+  useLasagnaSync();
   return <LasagnaView />;
 }

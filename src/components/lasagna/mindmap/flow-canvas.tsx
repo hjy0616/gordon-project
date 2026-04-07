@@ -171,16 +171,24 @@ export function FlowCanvas({ simulation, mode }: FlowCanvasProps) {
     [mode, setEdges, persistEdges],
   );
 
-  const handlePaneDoubleClick = useCallback(
-    (event: React.MouseEvent) => {
-      if (mode === "readonly" || !rfInstance.current) return;
+  const containerRef = useRef<HTMLDivElement>(null);
 
-      const bounds = (
-        event.currentTarget as HTMLElement
-      ).getBoundingClientRect();
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (mode === "readonly" || !rfInstance.current) return;
+      if (e.key !== "Tab") return;
+
+      const tag = (document.activeElement?.tagName ?? "").toLowerCase();
+      if (["input", "textarea", "select"].includes(tag)) return;
+
+      e.preventDefault();
+
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
       const position = rfInstance.current.screenToFlowPosition({
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
       });
 
       const nodeType = mode === "liquidity" ? "liquidity" : "transmission";
@@ -196,17 +204,19 @@ export function FlowCanvas({ simulation, mode }: FlowCanvasProps) {
         persistNodes(updated);
         return updated;
       });
-    },
-    [mode, setNodes, persistNodes],
-  );
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mode, setNodes, persistNodes]);
 
   const isReadonly = mode === "readonly";
 
   return (
-    <div className="relative h-full w-full">
+    <div ref={containerRef} className="relative h-full w-full">
       {!isReadonly && (
         <div className="absolute left-3 top-3 z-10 rounded-md border bg-background/80 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm">
-          캔버스 더블클릭 → 노드 추가 · 노드 더블클릭 → 이름 수정 · Delete → 삭제
+          Tab → 노드 추가 · 노드 더블클릭 → 이름 수정 · Delete → 삭제
         </div>
       )}
       <ReactFlow
@@ -218,7 +228,6 @@ export function FlowCanvas({ simulation, mode }: FlowCanvasProps) {
         onInit={(instance) => {
           rfInstance.current = instance;
         }}
-        onDoubleClick={isReadonly ? undefined : handlePaneDoubleClick}
         nodeTypes={nodeTypes}
         deleteKeyCode={isReadonly ? null : ["Backspace", "Delete"]}
         fitView

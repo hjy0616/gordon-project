@@ -22,6 +22,11 @@ enum RelationType {
   rival
 }
 
+enum SimulationStatus {
+  in_progress
+  completed
+}
+
 enum SurvivalTier {
   HIGHEST
   HIGH
@@ -53,7 +58,8 @@ model User {
   districtNotes     DistrictNote[]
   districtEdits     DistrictEdit[]
   districtOverrides DistrictOverride[]
-  preference        UserPreference?
+  preference            UserPreference?
+  lasagnaSimulations    LasagnaSimulation[]
 
   @@map("users")
 }
@@ -250,6 +256,32 @@ model DistrictOverride {
   @@unique([userId, districtId])
   @@index([userId])
   @@map("district_overrides")
+}
+
+// ══════════════════════════════════════════════════════════
+// LASAGNA SIMULATION DATA
+// ══════════════════════════════════════════════════════════
+
+model LasagnaSimulation {
+  id               String           @id @default(cuid())
+  userId           String           @map("user_id")
+  title            String
+  eventType        String           @map("event_type")
+  eventDescription String           @map("event_description") @db.Text
+  currentStep      Int              @default(1) @map("current_step")
+  status           SimulationStatus @default(in_progress)
+  steps            Json             @default("{}")
+  crowdAnalysis    Json             @map("crowd_analysis") @default("{\"emotion\":\"\",\"action\":\"\",\"narrative\":\"\"}")
+  myAnalysis       Json             @map("my_analysis") @default("{\"structure\":\"\",\"action\":\"\",\"reason\":\"\"}")
+  flowNodes        Json             @map("flow_nodes") @default("[]")
+  flowEdges        Json             @map("flow_edges") @default("[]")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("lasagna_simulations")
 }
 
 // ══════════════════════════════════════════════════════════

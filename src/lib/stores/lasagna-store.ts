@@ -11,6 +11,9 @@ import type {
   MainView,
 } from "@/types/lasagna";
 import { createEmptySimulation } from "@/types/lasagna";
+import { syncToServer } from "@/lib/api-sync";
+
+const API = "/api/lasagna/simulations";
 
 function updateSim(
   simulations: Simulation[],
@@ -56,7 +59,7 @@ interface LasagnaActions {
 
 export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       simulations: [],
       selectedSimulationId: null,
       panelMode: "list",
@@ -70,21 +73,24 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
           panelMode: "list",
           mainView: "stepper",
         }));
+        syncToServer(API, "POST", sim);
       },
 
-      deleteSimulation: (id) =>
+      deleteSimulation: (id) => {
         set((state) => ({
           simulations: state.simulations.filter((s) => s.id !== id),
           selectedSimulationId:
             state.selectedSimulationId === id
               ? null
               : state.selectedSimulationId,
-        })),
+        }));
+        syncToServer(API, "DELETE", { id });
+      },
 
       selectSimulation: (id) =>
         set({ selectedSimulationId: id }),
 
-      updateStep: (simId, stepNum, data) =>
+      updateStep: (simId, stepNum, data) => {
         set((state) => ({
           simulations: updateSim(state.simulations, simId, (sim) => ({
             steps: {
@@ -92,9 +98,12 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
               [stepNum]: { ...sim.steps[stepNum], ...data },
             },
           })),
-        })),
+        }));
+        const sim = get().simulations.find((s) => s.id === simId);
+        if (sim) syncToServer(API, "PUT", { id: simId, steps: sim.steps });
+      },
 
-      advanceStep: (simId) =>
+      advanceStep: (simId) => {
         set((state) => ({
           simulations: updateSim(state.simulations, simId, (sim) => ({
             currentStep: Math.min(sim.currentStep + 1, 8),
@@ -106,50 +115,77 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
               },
             },
           })),
-        })),
+        }));
+        const sim = get().simulations.find((s) => s.id === simId);
+        if (sim)
+          syncToServer(API, "PUT", {
+            id: simId,
+            currentStep: sim.currentStep,
+            steps: sim.steps,
+          });
+      },
 
-      goToStep: (simId, stepNum) =>
+      goToStep: (simId, stepNum) => {
         set((state) => ({
           simulations: updateSim(state.simulations, simId, () => ({
             currentStep: stepNum,
           })),
-        })),
+        }));
+        syncToServer(API, "PUT", { id: simId, currentStep: stepNum });
+      },
 
-      updateCrowdAnalysis: (simId, data) =>
+      updateCrowdAnalysis: (simId, data) => {
         set((state) => ({
           simulations: updateSim(state.simulations, simId, (sim) => ({
             crowdAnalysis: { ...sim.crowdAnalysis, ...data },
           })),
-        })),
+        }));
+        const sim = get().simulations.find((s) => s.id === simId);
+        if (sim)
+          syncToServer(API, "PUT", {
+            id: simId,
+            crowdAnalysis: sim.crowdAnalysis,
+          });
+      },
 
-      updateMyAnalysis: (simId, data) =>
+      updateMyAnalysis: (simId, data) => {
         set((state) => ({
           simulations: updateSim(state.simulations, simId, (sim) => ({
             myAnalysis: { ...sim.myAnalysis, ...data },
           })),
-        })),
+        }));
+        const sim = get().simulations.find((s) => s.id === simId);
+        if (sim)
+          syncToServer(API, "PUT", { id: simId, myAnalysis: sim.myAnalysis });
+      },
 
-      updateFlowNodes: (simId, nodes) =>
+      updateFlowNodes: (simId, nodes) => {
         set((state) => ({
           simulations: updateSim(state.simulations, simId, () => ({
             flowNodes: nodes,
           })),
-        })),
+        }));
+        syncToServer(API, "PUT", { id: simId, flowNodes: nodes });
+      },
 
-      updateFlowEdges: (simId, edges) =>
+      updateFlowEdges: (simId, edges) => {
         set((state) => ({
           simulations: updateSim(state.simulations, simId, () => ({
             flowEdges: edges,
           })),
-        })),
+        }));
+        syncToServer(API, "PUT", { id: simId, flowEdges: edges });
+      },
 
-      completeSimulation: (simId) =>
+      completeSimulation: (simId) => {
         set((state) => ({
           simulations: updateSim(state.simulations, simId, () => ({
             status: "completed",
           })),
           mainView: "summary" as MainView,
-        })),
+        }));
+        syncToServer(API, "PUT", { id: simId, status: "completed" });
+      },
 
       setPanelMode: (mode) => set({ panelMode: mode }),
 
