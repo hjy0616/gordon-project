@@ -35,18 +35,37 @@ enum SurvivalTier {
   LOW
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+}
+
 // ══════════════════════════════════════════════════════════
 // AUTH TABLES
 // ══════════════════════════════════════════════════════════
 
 model User {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String   @unique
-  password  String?
-  image     String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                String     @id @default(cuid())
+  name              String?
+  email             String     @unique
+  password          String?
+  image             String?
+  role              Role       @default(USER)
+  status            UserStatus @default(PENDING)
+  verificationImage String?    @map("verification_image")
+  activeFrom          DateTime?  @map("active_from")
+  activeUntil         DateTime?  @map("active_until")
+  renewalImage        String?    @map("renewal_image")
+  renewalSubmittedAt  DateTime?  @map("renewal_submitted_at")
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
 
   accounts          Account[]
   sessions          Session[]

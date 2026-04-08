@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
 import Link from "next/link";
+import { Upload, X, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,16 +15,57 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export default function RegisterPage() {
-  const router = useRouter();
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
+export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [errorField, setErrorField] = useState<"email" | "password" | "confirm" | "general" | "">("");
+  const [errorField, setErrorField] = useState<
+    "email" | "password" | "confirm" | "image" | "general" | ""
+  >("");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleFileSelect = useCallback((file: File) => {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setError("JPG, PNG, WEBP 형식의 이미지만 허용됩니다.");
+      setErrorField("image");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setError("이미지 크기는 5MB 이하여야 합니다.");
+      setErrorField("image");
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setError("");
+    setErrorField("");
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      const file = e.dataTransfer.files[0];
+      if (file) handleFileSelect(file);
+    },
+    [handleFileSelect]
+  );
+
+  const removeImage = useCallback(() => {
+    setImageFile(null);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
+  }, [imagePreview]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,37 +77,43 @@ export default function RegisterPage() {
       setErrorField("email");
       return;
     }
-
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("올바른 이메일 형식을 입력해주세요.");
       setErrorField("email");
       return;
     }
-
     if (!password) {
       setError("비밀번호를 입력해주세요.");
       setErrorField("password");
       return;
     }
-
-    if (password !== confirmPassword) {
-      setError("비밀번호가 일치하지 않습니다.");
-      setErrorField("confirm");
-      return;
-    }
-
     if (password.length < 6) {
       setError("비밀번호는 6자 이상이어야 합니다.");
       setErrorField("password");
       return;
     }
+    if (password !== confirmPassword) {
+      setError("비밀번호가 일치하지 않습니다.");
+      setErrorField("confirm");
+      return;
+    }
+    if (!imageFile) {
+      setError("인증 이미지를 업로드해주세요.");
+      setErrorField("image");
+      return;
+    }
 
     setLoading(true);
 
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("email", email);
+    formData.append("password", password);
+    formData.append("verificationImage", imageFile);
+
     const res = await fetch("/api/auth/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: formData,
     });
 
     if (!res.ok) {
@@ -79,21 +125,33 @@ export default function RegisterPage() {
       return;
     }
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    setSuccess(true);
+    setLoading(false);
+  }
 
-    if (result?.error) {
-      setError("가입은 완료되었지만 로그인에 실패했습니다. 로그인 페이지에서 다시 시도해주세요.");
-      setErrorField("general");
-      setLoading(false);
-      return;
-    }
-
-    router.refresh();
-    router.push("/dashboard");
+  if (success) {
+    return (
+      <Card className="w-full max-w-sm">
+        <CardHeader className="space-y-1 text-center">
+          <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10">
+            <CheckCircle className="size-6 text-primary" />
+          </div>
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            가입 완료
+          </CardTitle>
+          <CardDescription>
+            회원가입이 완료되었습니다.
+            <br />
+            관리자 승인 후 로그인할 수 있습니다.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter className="pt-4">
+          <Button nativeButton={false} render={<Link href="/login" />} className="w-full">
+            로그인 페이지로
+          </Button>
+        </CardFooter>
+      </Card>
+    );
   }
 
   return (
@@ -126,7 +184,11 @@ export default function RegisterPage() {
               type="email"
               placeholder="email@example.com"
               value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(""); setErrorField(""); }}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError("");
+                setErrorField("");
+              }}
               className={errorField === "email" ? "border-destructive" : ""}
               required
             />
@@ -141,7 +203,11 @@ export default function RegisterPage() {
               type="password"
               placeholder="6자 이상"
               value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(""); setErrorField(""); }}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError("");
+                setErrorField("");
+              }}
               className={errorField === "password" ? "border-destructive" : ""}
               required
             />
@@ -155,11 +221,74 @@ export default function RegisterPage() {
               id="confirmPassword"
               type="password"
               value={confirmPassword}
-              onChange={(e) => { setConfirmPassword(e.target.value); setError(""); setErrorField(""); }}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setError("");
+                setErrorField("");
+              }}
               className={errorField === "confirm" ? "border-destructive" : ""}
               required
             />
             {errorField === "confirm" && (
+              <p className="text-xs text-destructive">{error}</p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <Label>인증 이미지 *</Label>
+            <p className="text-xs text-muted-foreground">
+              인증 이미지는 결제 날짜가 포함되어야합니다
+            </p>
+            {imagePreview ? (
+              <div className="relative">
+                <img
+                  src={imagePreview}
+                  alt="인증 이미지 미리보기"
+                  className="h-32 w-full rounded-md border object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute right-1 top-1 rounded-full bg-background/80 p-1 hover:bg-background"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            ) : (
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                className={`flex h-32 cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed transition-colors ${
+                  dragOver
+                    ? "border-primary bg-primary/5"
+                    : errorField === "image"
+                      ? "border-destructive"
+                      : "border-muted-foreground/25 hover:border-primary/50"
+                }`}
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = ALLOWED_TYPES.join(",");
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) handleFileSelect(file);
+                  };
+                  input.click();
+                }}
+              >
+                <Upload className="mb-2 size-6 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">
+                  클릭 또는 드래그하여 업로드
+                </p>
+                <p className="text-xs text-muted-foreground/60">
+                  JPG, PNG, WEBP (최대 5MB)
+                </p>
+              </div>
+            )}
+            {errorField === "image" && (
               <p className="text-xs text-destructive">{error}</p>
             )}
           </div>

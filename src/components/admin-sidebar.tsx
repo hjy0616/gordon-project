@@ -3,27 +3,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import {
-  ChevronRight,
+  ArrowLeft,
   ChevronsUpDown,
-  Globe,
-  Layers,
+  FileCheck,
   LayoutDashboard,
   LogOut,
-  Map,
-  MapPin,
   Moon,
-  Shield,
   Sun,
+  UserCheck,
+  Users,
 } from "lucide-react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,21 +31,36 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { SidebarRenewalStatus } from "@/components/sidebar-renewal-status";
 
-const mapSubItems = [
-  { title: "Macro Map", href: "/map/macro-map", icon: Globe },
-  { title: "Secret Treasure Map", href: "/map/secret-treasure-map", icon: MapPin },
+interface AdminCounts {
+  pending: number;
+  renewal: number;
+}
+
+const navItems = [
+  { title: "대시보드", href: "/admin", icon: LayoutDashboard, badgeKey: null },
+  {
+    title: "승인 대기",
+    href: "/admin/approvals",
+    icon: UserCheck,
+    badgeKey: "pending" as const,
+  },
+  {
+    title: "재인증",
+    href: "/admin/renewals",
+    icon: FileCheck,
+    badgeKey: "renewal" as const,
+  },
+  { title: "사용자 관리", href: "/admin/users", icon: Users, badgeKey: null },
 ];
 
 function NavUser() {
@@ -106,15 +114,6 @@ function NavUser() {
               )}
               {theme === "dark" ? "라이트 모드" : "다크 모드"}
             </DropdownMenuItem>
-            {user?.role === "ADMIN" && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem render={<Link href="/admin" />}>
-                  <Shield className="mr-2 size-4" />
-                  Admin
-                </DropdownMenuItem>
-              </>
-            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => signOut({ callbackUrl: "/login" })}
@@ -129,16 +128,32 @@ function NavUser() {
   );
 }
 
-export function AppSidebar() {
-  const { data: session } = useSession();
+export function AdminSidebar() {
   const pathname = usePathname();
-  const isMapActive = pathname.startsWith("/map");
-  const [mapOpen, setMapOpen] = useState(isMapActive);
+  const [counts, setCounts] = useState<AdminCounts>({ pending: 0, renewal: 0 });
+
+  useEffect(() => {
+    let active = true;
+
+    const doFetch = () =>
+      fetch("/api/admin/counts")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (active && data) setCounts(data);
+        });
+
+    doFetch();
+    const interval = setInterval(doFetch, 60000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:pt-3">
-        <Link href="/dashboard" className="flex items-center">
+        <Link href="/admin" className="flex flex-col items-start gap-1">
           <Image
             src="/logo.svg"
             alt="GORDON"
@@ -155,72 +170,64 @@ export function AppSidebar() {
             className="hidden group-data-[collapsible=icon]:block"
             priority
           />
+          <span className="text-xs font-medium text-muted-foreground group-data-[collapsible=icon]:hidden">
+            Admin
+          </span>
         </Link>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
+          <SidebarGroupLabel>관리</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navItems.map((item) => {
+                const badgeCount =
+                  item.badgeKey ? counts[item.badgeKey] : 0;
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      isActive={
+                        item.href === "/admin"
+                          ? pathname === "/admin"
+                          : pathname.startsWith(item.href)
+                      }
+                      tooltip={item.title}
+                      render={<Link href={item.href} />}
+                    >
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                    {badgeCount > 0 && (
+                      <SidebarMenuBadge>{badgeCount}</SidebarMenuBadge>
+                    )}
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={pathname === "/dashboard"}
-                  tooltip="Dashboard"
+                  tooltip="앱으로 돌아가기"
                   render={<Link href="/dashboard" />}
                 >
-                  <LayoutDashboard />
-                  <span>Dashboard</span>
+                  <ArrowLeft />
+                  <span>앱으로 돌아가기</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-
-              <Collapsible open={mapOpen} onOpenChange={setMapOpen} className="group/collapsible">
-                <SidebarMenuItem>
-                  <CollapsibleTrigger
-                    render={
-                      <SidebarMenuButton isActive={isMapActive} tooltip="Map" />
-                    }
-                  >
-                    <Map />
-                    <span>Map</span>
-                    <ChevronRight className="ml-auto transition-transform duration-200 [[data-panel-open]_&]:rotate-90" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {mapSubItems.map((item) => (
-                        <SidebarMenuSubItem key={item.href}>
-                          <SidebarMenuSubButton
-                            isActive={pathname === item.href}
-                            render={<Link href={item.href} />}
-                          >
-                            <item.icon />
-                            <span>{item.title}</span>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={pathname === "/lasagna"}
-                  tooltip="Lasagna"
-                  render={<Link href="/lasagna" />}
-                >
-                  <Layers />
-                  <span>Lasagna <span className="text-[10px] text-muted-foreground">(beta)</span></span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter>
-        <SidebarRenewalStatus />
-        <SidebarSeparator />
         <NavUser />
       </SidebarFooter>
 

@@ -16,6 +16,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+const STATUS_MESSAGES: Record<string, string> = {
+  PENDING: "관리자 승인 대기 중입니다.",
+  EXPIRED: "이용 기간이 만료되었습니다. 관리자에게 문의하세요.",
+  SUSPENDED: "계정이 비활성화되었습니다.",
+};
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -38,7 +44,11 @@ function LoginForm() {
     });
 
     if (result?.error) {
-      setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+      const errorCode = result.error.replace("Error: ", "");
+      const statusMessage = STATUS_MESSAGES[errorCode];
+      setError(
+        statusMessage || "이메일 또는 비밀번호가 올바르지 않습니다."
+      );
       setLoading(false);
       return;
     }

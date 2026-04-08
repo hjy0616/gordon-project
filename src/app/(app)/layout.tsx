@@ -12,7 +12,7 @@ export default function AppLayout({
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
-          <header className="flex h-12 items-center px-4">
+          <header className="flex h-12 items-center gap-2 px-4">
             <SidebarTrigger />
           </header>
           <div className="flex-1 overflow-hidden p-6">
