@@ -39,7 +39,7 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable}`}
     >
-      <body className="min-h-svh">
+      <body className="min-h-svh" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

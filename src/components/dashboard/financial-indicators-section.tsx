@@ -124,6 +124,9 @@ export function FinancialIndicatorsSection() {
   const repoOps = fred("RPONTSYD");
   const sofr = fred("SOFR");
   const mmfTotal = fred("MMMFFAQ027S");
+  const iorb = fred("IORB");
+  const dgs1mo = fred("DGS1MO");
+  const dgs3mo = fred("DGS3MO");
 
   // ── Net Liquidity = Fed Balance - TGA - ON RRP ──
   // WALCL: millions, WTREGEN: millions, RRPONTSYD: billions → convert to millions
@@ -179,7 +182,7 @@ export function FinancialIndicatorsSection() {
       {/* Header */}
       <div className="mb-3 flex items-baseline justify-between">
         <h2 className="text-sm font-semibold text-primary">Yahoo & FRED</h2>
-        <span className="text-[11px] text-muted-foreground">{formatTime()}</span>
+        <span className="text-[11px] text-muted-foreground" suppressHydrationWarning>{formatTime()}</span>
       </div>
 
       {/* 2-column layout */}
@@ -208,6 +211,9 @@ export function FinancialIndicatorsSection() {
             value={netLiqValue !== null ? formatValue(netLiqValue) : null}
             change={formatChange(netLiqChange)}
           />
+          {fredRow("지급준비금금리(IoRB)", iorb, "percent")}
+          {fredRow("미국국채 1개월", dgs1mo, "percent")}
+          {fredRow("미국국채 3개월", dgs3mo, "percent")}
         </div>
       </div>
     </div>

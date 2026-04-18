@@ -1,20 +1,12 @@
 import { NextResponse } from "next/server";
 
-const FRED_SERIES = [
-  { id: "STLFSI2", name: "Stress Idx" },
-  { id: "WM2NS", name: "M2 Supply" },
-  { id: "WALCL", name: "Fed Balance" },
-  { id: "WTREGEN", name: "TGA (Est)" },
-  { id: "RRPONTSYD", name: "ON RRP" },
-  { id: "RPONTSYD", name: "Repo Ops" },
-  { id: "SOFR", name: "SOFR" },
-  { id: "MMMFFAQ027S", name: "MMF Total" },
-  { id: "IORB", name: "지급준비금금리(IoRB)" },
-  { id: "DGS1MO", name: "미국국채 1개월" },
-  { id: "DGS3MO", name: "미국국채 3개월" },
+const EMPLOYMENT_SERIES = [
+  { id: "UNRATE", name: "실업률(Unemployment Rate)" },
+  { id: "PAYEMS", name: "비농업고용인구(Nonfarm Payrolls)" },
+  { id: "CPIAUCSL", name: "소비자물가지수(CPI)" },
 ] as const;
 
-export interface FredIndicator {
+export interface EmploymentIndicator {
   id: string;
   name: string;
   value: number | null;
@@ -26,7 +18,7 @@ interface FredApiResponse {
   observations?: Array<{ date: string; value: string }>;
 }
 
-function makeNullIndicator(id: string, name: string): FredIndicator {
+function makeNull(id: string, name: string): EmploymentIndicator {
   return { id, name, value: null, change: null, date: null };
 }
 
@@ -34,22 +26,21 @@ async function fetchSeries(
   id: string,
   name: string,
   apiKey: string,
-): Promise<FredIndicator> {
+): Promise<EmploymentIndicator> {
   const url =
     `https://api.stlouisfed.org/fred/series/observations` +
     `?series_id=${id}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=2`;
 
   const res = await fetch(url, { cache: "no-store" }).catch(() => null);
-  if (!res || !res.ok) return makeNullIndicator(id, name);
+  if (!res || !res.ok) return makeNull(id, name);
 
   const json: FredApiResponse = await res.json().catch(() => null);
-  if (!json) return makeNullIndicator(id, name);
+  if (!json) return makeNull(id, name);
 
   const obs = json.observations ?? [];
   const latestRaw = obs[0]?.value;
   const prevRaw = obs[1]?.value;
 
-  // FRED returns "." for unavailable values
   const latest = latestRaw && latestRaw !== "." ? Number(latestRaw) : null;
   const previous = prevRaw && prevRaw !== "." ? Number(prevRaw) : null;
 
@@ -58,20 +49,14 @@ async function fetchSeries(
       ? Number((latest - previous).toFixed(2))
       : null;
 
-  return {
-    id,
-    name,
-    value: latest,
-    change,
-    date: obs[0]?.date ?? null,
-  };
+  return { id, name, value: latest, change, date: obs[0]?.date ?? null };
 }
 
 export async function GET() {
   const apiKey = process.env.FRED_API_KEY;
 
   if (!apiKey) {
-    const data = FRED_SERIES.map((s) => makeNullIndicator(s.id, s.name));
+    const data = EMPLOYMENT_SERIES.map((s) => makeNull(s.id, s.name));
     return NextResponse.json(
       { data, updatedAt: new Date().toISOString(), source: "error" as const },
       { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=30" } },
@@ -79,11 +64,11 @@ export async function GET() {
   }
 
   const results = await Promise.allSettled(
-    FRED_SERIES.map((s) => fetchSeries(s.id, s.name, apiKey)),
+    EMPLOYMENT_SERIES.map((s) => fetchSeries(s.id, s.name, apiKey)),
   );
 
-  const data: FredIndicator[] = results.map((r, i) =>
-    r.status === "fulfilled" ? r.value : makeNullIndicator(FRED_SERIES[i].id, FRED_SERIES[i].name),
+  const data: EmploymentIndicator[] = results.map((r, i) =>
+    r.status === "fulfilled" ? r.value : makeNull(EMPLOYMENT_SERIES[i].id, EMPLOYMENT_SERIES[i].name),
   );
 
   const hasAnyData = data.some((d) => d.value !== null);

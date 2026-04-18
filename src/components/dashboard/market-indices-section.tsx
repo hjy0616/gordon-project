@@ -84,7 +84,7 @@ export function MarketIndicesSection() {
       <div className="mb-4 flex items-baseline justify-between">
         <h2 className="text-sm font-semibold text-primary">INDEXerGO Market</h2>
         <span className="text-xs text-muted-foreground">
-          {formatTime()} LIVE
+          <span suppressHydrationWarning>{formatTime()}</span> LIVE
         </span>
       </div>
       <div className="grid grid-cols-2 gap-3">
