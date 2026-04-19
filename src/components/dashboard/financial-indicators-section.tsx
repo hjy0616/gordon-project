@@ -160,6 +160,21 @@ export function FinancialIndicatorsSection() {
       ? Number((netLiqValue - prevNetLiq).toFixed(2))
       : null;
 
+  // ── SOFR-IORB Spread (bps) ──
+  const sofrVal = sofr?.value ?? null;
+  const iorbVal = iorb?.value ?? null;
+  const sofrIorbBps =
+    sofrVal !== null && iorbVal !== null
+      ? Number(((sofrVal - iorbVal) * 100).toFixed(2))
+      : null;
+
+  const sofrChg = sofr?.change ?? null;
+  const iorbChg = iorb?.change ?? null;
+  const sofrIorbChangeBps =
+    sofrChg !== null && iorbChg !== null
+      ? Number(((sofrChg - iorbChg) * 100).toFixed(2))
+      : null;
+
   // ── helpers for Yahoo/Market rows ──
   const yahooRow = (label: string, item: { price: number | null; changeRate: number | null } | undefined, type: "number" | "percent" | "index" = "number") => (
     <IndicatorRow
@@ -204,14 +219,23 @@ export function FinancialIndicatorsSection() {
           {fredRow("TGA (Est)", tga)}
           {fredRow("ON RRP", onRrp)}
           {fredRow("Repo Ops", repoOps)}
-          {fredRow("SOFR", sofr, "percent")}
-          {fredRow("MMF Total", mmfTotal)}
           <IndicatorRow
             label="Net Liquidity"
             value={netLiqValue !== null ? formatValue(netLiqValue) : null}
             change={formatChange(netLiqChange)}
           />
-          {fredRow("지급준비금금리(IoRB)", iorb, "percent")}
+          {fredRow("SOFR", sofr, "percent")}
+          {fredRow("IORB", iorb, "percent")}
+          <IndicatorRow
+            label="SOFR-IORB Spread"
+            value={sofrIorbBps !== null ? `${sofrIorbBps.toFixed(0)} bps` : null}
+            change={
+              sofrIorbChangeBps !== null
+                ? `${sofrIorbChangeBps >= 0 ? "+" : ""}${sofrIorbChangeBps.toFixed(0)} bps`
+                : null
+            }
+          />
+          {fredRow("MMF Total", mmfTotal)}
           {fredRow("미국국채 1개월", dgs1mo, "percent")}
           {fredRow("미국국채 3개월", dgs3mo, "percent")}
         </div>
