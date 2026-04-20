@@ -217,7 +217,6 @@ export function FinancialIndicatorsSection() {
         <div>
           {fredRow("Fed Balance", fedBalance)}
           {fredRow("TGA (Est)", tga)}
-          {fredRow("ON RRP", onRrp)}
           {fredRow("Repo Ops", repoOps)}
           <IndicatorRow
             label="Net Liquidity"
@@ -238,6 +237,7 @@ export function FinancialIndicatorsSection() {
           {fredRow("MMF Total", mmfTotal)}
           {fredRow("미국국채 1개월", dgs1mo, "percent")}
           {fredRow("미국국채 3개월", dgs3mo, "percent")}
+          {fredRow("ON RRP", onRrp)}
         </div>
       </div>
     </div>
