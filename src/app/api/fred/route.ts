@@ -12,6 +12,7 @@ const FRED_SERIES = [
   { id: "IORB", name: "지급준비금금리(IoRB)" },
   { id: "DGS1MO", name: "미국국채 1개월" },
   { id: "DGS3MO", name: "미국국채 3개월" },
+  { id: "RRPONTSYAWARD", name: "RRP 금리" },
   { id: "BAMLH0A0HYM2", name: "High Yield Spread" },
 ] as const;
 
