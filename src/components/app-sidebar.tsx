@@ -15,10 +15,12 @@ import {
   LogOut,
   Map,
   MapPin,
+  MessageSquare,
   Moon,
   Shield,
   Sun,
 } from "lucide-react";
+import { useBoards } from "@/lib/queries/use-boards";
 import {
   Collapsible,
   CollapsibleContent,
@@ -133,7 +135,11 @@ export function AppSidebar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const isMapActive = pathname.startsWith("/map");
+  const isBoardActive = pathname.startsWith("/board");
   const [mapOpen, setMapOpen] = useState(isMapActive);
+  const [boardOpen, setBoardOpen] = useState(isBoardActive);
+  const { data: boardsData } = useBoards();
+  const boards = boardsData?.boards ?? [];
 
   return (
     <Sidebar collapsible="icon">
@@ -213,6 +219,48 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
+              <Collapsible
+                open={boardOpen}
+                onOpenChange={setBoardOpen}
+                className="group/collapsible"
+              >
+                <SidebarMenuItem>
+                  <CollapsibleTrigger
+                    render={
+                      <SidebarMenuButton isActive={isBoardActive} tooltip="게시판" />
+                    }
+                  >
+                    <MessageSquare />
+                    <span>게시판</span>
+                    <ChevronRight className="ml-auto transition-transform duration-200 [[data-panel-open]_&]:rotate-90" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {boards.length === 0 ? (
+                        <SidebarMenuSubItem>
+                          <span className="px-2 py-1.5 text-xs text-muted-foreground">
+                            등록된 게시판이 없습니다
+                          </span>
+                        </SidebarMenuSubItem>
+                      ) : (
+                        boards.map((board) => {
+                          const href = `/board/${board.slug}`;
+                          return (
+                            <SidebarMenuSubItem key={board.id}>
+                              <SidebarMenuSubButton
+                                isActive={pathname.startsWith(href)}
+                                render={<Link href={href} />}
+                              >
+                                <span>{board.name}</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          );
+                        })
+                      )}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
 
             </SidebarMenu>
           </SidebarGroupContent>

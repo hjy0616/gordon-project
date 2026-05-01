@@ -1,12 +1,20 @@
+import { redirect } from "next/navigation";
+
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { QueryProvider } from "@/lib/providers/query-provider";
+import { requireActiveUser } from "@/lib/auth-utils";
 
-export default function AppLayout({
+export default async function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const user = await requireActiveUser();
+  if (!user) {
+    redirect("/login");
+  }
+
   return (
     <QueryProvider>
       <SidebarProvider>

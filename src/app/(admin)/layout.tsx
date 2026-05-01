@@ -1,4 +1,3 @@
-import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
   SidebarProvider,
@@ -7,14 +6,15 @@ import {
 } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { QueryProvider } from "@/lib/providers/query-provider";
+import { requireActiveAdmin } from "@/lib/auth-utils";
 
 export default async function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  const admin = await requireActiveAdmin();
+  if (!admin) {
     redirect("/dashboard");
   }
 

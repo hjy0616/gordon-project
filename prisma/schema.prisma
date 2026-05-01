@@ -52,33 +52,36 @@ enum UserStatus {
 // ══════════════════════════════════════════════════════════
 
 model User {
-  id                String     @id @default(cuid())
-  name              String?
-  email             String     @unique
-  password          String?
-  image             String?
-  role              Role       @default(USER)
-  status            UserStatus @default(PENDING)
-  verificationImage String?    @map("verification_image")
-  activeFrom          DateTime?  @map("active_from")
-  activeUntil         DateTime?  @map("active_until")
-  renewalImage        String?    @map("renewal_image")
-  renewalSubmittedAt  DateTime?  @map("renewal_submitted_at")
-  createdAt           DateTime   @default(now()) @map("created_at")
-  updatedAt         DateTime   @updatedAt @map("updated_at")
+  id                 String     @id @default(cuid())
+  name               String?
+  email              String     @unique
+  password           String?
+  image              String?
+  role               Role       @default(USER)
+  status             UserStatus @default(PENDING)
+  verificationImage  String?    @map("verification_image")
+  activeFrom         DateTime?  @map("active_from")
+  activeUntil        DateTime?  @map("active_until")
+  renewalImage       String?    @map("renewal_image")
+  renewalSubmittedAt DateTime?  @map("renewal_submitted_at")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
 
-  accounts          Account[]
-  sessions          Session[]
-  countryNotes      CountryNote[]
-  countryEdits      CountryEdit[]
-  capitalFlows      CapitalFlow[]
-  countryRelations  CountryRelation[]
-  customDistricts   CustomDistrict[]
-  districtNotes     DistrictNote[]
-  districtEdits     DistrictEdit[]
-  districtOverrides DistrictOverride[]
-  preference            UserPreference?
-  lasagnaSimulations    LasagnaSimulation[]
+  accounts           Account[]
+  sessions           Session[]
+  countryNotes       CountryNote[]
+  countryEdits       CountryEdit[]
+  capitalFlows       CapitalFlow[]
+  countryRelations   CountryRelation[]
+  customDistricts    CustomDistrict[]
+  districtNotes      DistrictNote[]
+  districtEdits      DistrictEdit[]
+  districtOverrides  DistrictOverride[]
+  preference         UserPreference?
+  lasagnaSimulations LasagnaSimulation[]
+  posts              Post[]
+  comments           Comment[]
+  postLikes          PostLike[]
 
   @@map("users")
 }
@@ -290,10 +293,10 @@ model LasagnaSimulation {
   currentStep      Int              @default(1) @map("current_step")
   status           SimulationStatus @default(in_progress)
   steps            Json             @default("{}")
-  crowdAnalysis    Json             @map("crowd_analysis") @default("{\"emotion\":\"\",\"action\":\"\",\"narrative\":\"\"}")
-  myAnalysis       Json             @map("my_analysis") @default("{\"structure\":\"\",\"action\":\"\",\"reason\":\"\"}")
-  flowNodes        Json             @map("flow_nodes") @default("[]")
-  flowEdges        Json             @map("flow_edges") @default("[]")
+  crowdAnalysis    Json             @default("{\"emotion\":\"\",\"action\":\"\",\"narrative\":\"\"}") @map("crowd_analysis")
+  myAnalysis       Json             @default("{\"structure\":\"\",\"action\":\"\",\"reason\":\"\"}") @map("my_analysis")
+  flowNodes        Json             @default("[]") @map("flow_nodes")
+  flowEdges        Json             @default("[]") @map("flow_edges")
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
 
@@ -301,6 +304,76 @@ model LasagnaSimulation {
 
   @@index([userId])
   @@map("lasagna_simulations")
+}
+
+// ══════════════════════════════════════════════════════════
+// BOARDS (게시판 시스템)
+// ══════════════════════════════════════════════════════════
+
+model Board {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  posts Post[]
+
+  @@index([isActive, sortOrder])
+  @@map("boards")
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  boardId   String   @map("board_id")
+  authorId  String   @map("author_id")
+  title     String
+  content   String   @db.Text
+  viewCount Int      @default(0) @map("view_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  board    Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  author   User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments Comment[]
+  likes    PostLike[]
+
+  @@index([boardId, createdAt(sort: Desc)])
+  @@index([authorId])
+  @@map("posts")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  authorId  String   @map("author_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([authorId])
+  @@map("comments")
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("post_likes")
 }
 
 // ══════════════════════════════════════════════════════════

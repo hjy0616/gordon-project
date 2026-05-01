@@ -50,8 +50,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error("EXPIRED");
         }
 
-        // Check activeUntil expiration
-        if (user.activeUntil && new Date() > user.activeUntil) {
+        // Check activeUntil expiration (ADMIN exempt — 운영자는 멤버십 만료 적용 안 함)
+        if (
+          user.role !== "ADMIN" &&
+          user.activeUntil &&
+          new Date() > user.activeUntil
+        ) {
           await prisma.user.update({
             where: { id: user.id },
             data: { status: "EXPIRED" },
@@ -65,6 +69,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           image: user.image,
           role: user.role,
+          status: user.status,
           activeUntil: user.activeUntil?.toISOString() ?? null,
         };
       },
@@ -75,17 +80,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.status = user.status;
         token.activeUntil = user.activeUntil ?? null;
       }
-      // Refresh activeUntil on every session update
-      if (trigger === "update" && token.id) {
+      const needsBackfill = !!token.id && !token.status;
+      if ((trigger === "update" || needsBackfill) && token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { activeUntil: true, role: true },
+          select: { activeUntil: true, role: true, status: true },
         });
         if (dbUser) {
           token.activeUntil = dbUser.activeUntil?.toISOString() ?? null;
           token.role = dbUser.role;
+          token.status = dbUser.status;
         }
       }
       return token;
@@ -96,6 +103,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       if (token?.role) {
         session.user.role = token.role;
+      }
+      if (token?.status) {
+        session.user.status = token.status;
       }
       session.user.activeUntil = (token.activeUntil as string) ?? null;
       return session;

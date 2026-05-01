@@ -169,6 +169,9 @@ export default function RegisterPage() {
           )}
           <div className="space-y-1">
             <Label htmlFor="name">이름</Label>
+            <p className="text-xs text-muted-foreground">
+              네프콘 닉네임과 동일하게 입력해주세요.
+            </p>
             <Input
               id="name"
               type="text"
@@ -236,7 +239,7 @@ export default function RegisterPage() {
           <div className="space-y-1">
             <Label>인증 이미지 *</Label>
             <p className="text-xs text-muted-foreground">
-              인증 이미지는 결제 날짜가 포함되어야합니다
+              네프콘 닉네임과 혜택 기간(결제 종료일)이 함께 보이는 사진을 업로드해주세요.
             </p>
             {imagePreview ? (
               <div className="relative">

@@ -12,6 +12,7 @@ import {
   FileCheck,
   LayoutDashboard,
   LogOut,
+  MessageSquare,
   Moon,
   Sun,
   UserCheck,
@@ -61,6 +62,7 @@ const navItems = [
     badgeKey: "renewal" as const,
   },
   { title: "사용자 관리", href: "/admin/users", icon: Users, badgeKey: null },
+  { title: "게시판 관리", href: "/admin/boards", icon: MessageSquare, badgeKey: null },
 ];
 
 function NavUser() {
