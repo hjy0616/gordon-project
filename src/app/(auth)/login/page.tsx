@@ -17,10 +17,12 @@ import {
 } from "@/components/ui/card";
 
 const STATUS_MESSAGES: Record<string, string> = {
-  PENDING: "관리자 승인 대기 중입니다.",
+  PENDING:
+    "관리자 승인 대기 중입니다. 승인이 완료되면 로그인할 수 있습니다.",
   EXPIRED: "이용 기간이 만료되었습니다. 관리자에게 문의하세요.",
-  SUSPENDED: "계정이 비활성화되었습니다.",
+  SUSPENDED: "계정이 정지되었습니다. 관리자에게 문의하세요.",
 };
+const GENERIC_ERROR = "이메일 또는 비밀번호가 올바르지 않습니다.";
 
 function LoginForm() {
   const router = useRouter();
@@ -37,6 +39,26 @@ function LoginForm() {
     setError("");
     setLoading(true);
 
+    const precheck = await fetch("/api/auth/login-precheck", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!precheck.ok) {
+      setError(GENERIC_ERROR);
+      setLoading(false);
+      return;
+    }
+
+    const { code } = (await precheck.json()) as { code: string };
+
+    if (code !== "OK") {
+      setError(STATUS_MESSAGES[code] ?? GENERIC_ERROR);
+      setLoading(false);
+      return;
+    }
+
     const result = await signIn("credentials", {
       email,
       password,
@@ -44,11 +66,7 @@ function LoginForm() {
     });
 
     if (result?.error) {
-      const errorCode = result.error.replace("Error: ", "");
-      const statusMessage = STATUS_MESSAGES[errorCode];
-      setError(
-        statusMessage || "이메일 또는 비밀번호가 올바르지 않습니다."
-      );
+      setError(GENERIC_ERROR);
       setLoading(false);
       return;
     }

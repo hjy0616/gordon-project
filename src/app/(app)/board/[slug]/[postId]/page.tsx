@@ -4,6 +4,7 @@ import { ChevronLeft, Eye, MessageCircle } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { resolveAvatarUrl, withResolvedAuthorImages } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PostContent } from "@/components/board/post-content";
@@ -53,7 +54,7 @@ export default async function PostDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [comments, userLike] = await Promise.all([
+  const [comments, userLike, authorImageUrl] = await Promise.all([
     prisma.comment.findMany({
       where: { postId: post.id },
       select: {
@@ -72,7 +73,10 @@ export default async function PostDetailPage({ params }: PageProps) {
           select: { id: true },
         })
       : Promise.resolve(null),
+    resolveAvatarUrl(post.author.image),
   ]);
+
+  const commentsWithAvatars = await withResolvedAuthorImages(comments);
 
   const initials =
     post.author.name?.slice(0, 1).toUpperCase() ??
@@ -100,8 +104,8 @@ export default async function PostDetailPage({ params }: PageProps) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-sm">
               <Avatar className="size-7">
-                {post.author.image && (
-                  <AvatarImage src={post.author.image} alt={post.author.name ?? ""} />
+                {authorImageUrl && (
+                  <AvatarImage src={authorImageUrl} alt={post.author.name ?? ""} />
                 )}
                 <AvatarFallback className="text-xs">{initials}</AvatarFallback>
               </Avatar>
@@ -142,7 +146,7 @@ export default async function PostDetailPage({ params }: PageProps) {
       <section className="border-t border-border pt-6">
         <CommentSection
           postId={post.id}
-          initialComments={comments.map((c) => ({
+          initialComments={commentsWithAvatars.map((c) => ({
             ...c,
             createdAt: c.createdAt.toISOString(),
             updatedAt: c.updatedAt.toISOString(),

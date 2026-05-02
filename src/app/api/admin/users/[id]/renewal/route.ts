@@ -49,35 +49,70 @@ export async function PUT(
     );
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id },
-    select: { renewalImage: true },
+  const result = await prisma.$transaction(async (tx) => {
+    const current = await tx.user.findUnique({
+      where: { id },
+      select: { renewalImage: true, status: true },
+    });
+
+    if (!current?.renewalImage) {
+      return {
+        ok: false as const,
+        code: 404,
+        error: "재인증 이미지가 없습니다.",
+      };
+    }
+
+    const updated = await tx.user.updateMany({
+      where: {
+        id,
+        renewalImage: current.renewalImage,
+        status: current.status,
+      },
+      data: {
+        verificationImage: current.renewalImage,
+        renewalImage: null,
+        renewalSubmittedAt: null,
+        activeUntil: new Date(activeUntil),
+        status: "ACTIVE",
+      },
+    });
+
+    if (updated.count !== 1) {
+      return {
+        ok: false as const,
+        code: 409,
+        error: "다른 어드민이 먼저 처리했거나 상태가 변경되었습니다.",
+      };
+    }
+
+    if (current.status !== "ACTIVE") {
+      await tx.userStatusLog.create({
+        data: {
+          userId: id,
+          fromStatus: current.status,
+          toStatus: "ACTIVE",
+          reason: `renewal-approved:${admin.id}`,
+        },
+      });
+    }
+
+    const refreshed = await tx.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        activeUntil: true,
+      },
+    });
+
+    return { ok: true as const, data: refreshed };
   });
 
-  if (!user?.renewalImage) {
-    return NextResponse.json(
-      { error: "재인증 이미지가 없습니다." },
-      { status: 404 }
-    );
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.code });
   }
-
-  const updated = await prisma.user.update({
-    where: { id },
-    data: {
-      verificationImage: user.renewalImage,
-      renewalImage: null,
-      renewalSubmittedAt: null,
-      activeUntil: new Date(activeUntil),
-      status: "ACTIVE",
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      status: true,
-      activeUntil: true,
-    },
-  });
-
-  return NextResponse.json(updated);
+  return NextResponse.json(result.data);
 }

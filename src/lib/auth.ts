@@ -39,28 +39,74 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        // Status checks
-        if (user.status === "PENDING") {
-          throw new Error("PENDING");
-        }
-        if (user.status === "SUSPENDED") {
-          throw new Error("SUSPENDED");
-        }
-        if (user.status === "EXPIRED") {
-          throw new Error("EXPIRED");
+        // Status checks — sign-in is gated to ACTIVE only.
+        // Pending/suspended/expired are surfaced to the user via
+        // /api/auth/login-precheck so we don't need to leak the reason here.
+        if (user.status !== "ACTIVE") {
+          return null;
         }
 
-        // Check activeUntil expiration (ADMIN exempt — 운영자는 멤버십 만료 적용 안 함)
+        // ADMIN exempt — 운영자는 멤버십 만료 적용 안 함
         if (
           user.role !== "ADMIN" &&
           user.activeUntil &&
           new Date() > user.activeUntil
         ) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { status: "EXPIRED" },
+          const now = new Date();
+          const expired = await prisma.$transaction(async (tx) => {
+            const result = await tx.user.updateMany({
+              where: {
+                id: user.id,
+                status: "ACTIVE",
+                activeUntil: { lt: now },
+              },
+              data: { status: "EXPIRED" },
+            });
+            if (result.count !== 1) return false;
+            await tx.userStatusLog.create({
+              data: {
+                userId: user.id,
+                fromStatus: user.status,
+                toStatus: "EXPIRED",
+                reason: "activeUntil 경과 — 자동 만료",
+              },
+            });
+            return true;
           });
-          throw new Error("EXPIRED");
+
+          if (expired) return null;
+
+          // race: read 이후 어드민이 갱신/재활성화함. fresh 한 번 더 읽고 진실 결정.
+          const fresh = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              image: true,
+              role: true,
+              status: true,
+              activeUntil: true,
+            },
+          });
+          if (!fresh || fresh.status !== "ACTIVE") return null;
+          if (
+            fresh.role !== "ADMIN" &&
+            fresh.activeUntil &&
+            new Date() > fresh.activeUntil
+          ) {
+            return null;
+          }
+
+          return {
+            id: fresh.id,
+            email: fresh.email,
+            name: fresh.name,
+            image: fresh.image,
+            role: fresh.role,
+            status: fresh.status,
+            activeUntil: fresh.activeUntil?.toISOString() ?? null,
+          };
         }
 
         return {
@@ -75,6 +121,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  events: {
+    async signIn({ user }) {
+      if (!user?.id) return;
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        });
+      } catch (err) {
+        console.error("[auth.events.signIn] lastLoginAt update failed", err);
+      }
+    },
+  },
   callbacks: {
     async jwt({ token, user, trigger }) {
       if (user) {

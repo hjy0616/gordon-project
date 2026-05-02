@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireActiveUser } from "@/lib/auth-utils";
 import { findMutablePost } from "@/lib/board-guards";
+import {
+  withResolvedAuthorImage,
+  withResolvedAuthorImages,
+} from "@/lib/avatar";
 
 const MAX_COMMENT_LENGTH = 2000;
 
@@ -29,7 +33,9 @@ export async function GET(
     orderBy: { createdAt: "asc" },
   });
 
-  return NextResponse.json({ comments });
+  const commentsWithAvatars = await withResolvedAuthorImages(comments);
+
+  return NextResponse.json({ comments: commentsWithAvatars });
 }
 
 export async function POST(
@@ -77,5 +83,7 @@ export async function POST(
     },
   });
 
-  return NextResponse.json(comment, { status: 201 });
+  const commentWithAvatar = await withResolvedAuthorImage(comment);
+
+  return NextResponse.json(commentWithAvatar, { status: 201 });
 }

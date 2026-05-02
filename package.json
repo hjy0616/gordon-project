@@ -32,6 +32,7 @@
     "@tiptap/extension-text-align": "^3.22.5",
     "@tiptap/react": "^3.22.5",
     "@tiptap/starter-kit": "^3.22.5",
+    "@vercel/analytics": "^2.0.1",
     "@xyflow/react": "^12.10.2",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",

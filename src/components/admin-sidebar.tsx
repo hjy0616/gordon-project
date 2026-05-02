@@ -8,6 +8,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import {
   ArrowLeft,
+  BarChart3,
   ChevronsUpDown,
   FileCheck,
   LayoutDashboard,
@@ -49,6 +50,7 @@ interface AdminCounts {
 
 const navItems = [
   { title: "대시보드", href: "/admin", icon: LayoutDashboard, badgeKey: null },
+  { title: "분석", href: "/admin/analytics", icon: BarChart3, badgeKey: null },
   {
     title: "승인 대기",
     href: "/admin/approvals",

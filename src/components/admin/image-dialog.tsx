@@ -7,7 +7,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { Maximize2, ZoomIn, ZoomOut } from "lucide-react";
+import { Maximize2, X, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,8 +34,11 @@ export function ImageDialog({ user, onClose, imageType }: ImageDialogProps) {
 
   return (
     <Dialog open={!!user} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex h-[95vh] w-[95vw] max-w-[95vw] flex-col gap-0 p-0 sm:max-w-[95vw]">
-        <DialogHeader className="p-4 pr-12">
+      <DialogContent
+        showCloseButton={false}
+        className="flex h-[95vh] w-[95vw] max-w-[95vw] flex-col gap-0 p-0 sm:max-w-[95vw]"
+      >
+        <DialogHeader className="p-4 pr-16">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             {user?.name || user?.email}
@@ -49,6 +52,19 @@ export function ImageDialog({ user, onClose, imageType }: ImageDialogProps) {
             title={title}
           />
         ) : null}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="닫기"
+          className="absolute z-10 inline-flex size-10 items-center justify-center rounded-full bg-background/90 text-foreground shadow ring-1 ring-border backdrop-blur-sm transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          style={{
+            top: "max(0.75rem, env(safe-area-inset-top))",
+            right: "max(0.75rem, env(safe-area-inset-right))",
+          }}
+        >
+          <X className="size-5" />
+          <span className="sr-only">닫기</span>
+        </button>
       </DialogContent>
     </Dialog>
   );

@@ -123,6 +123,19 @@ export function useAdminUsers(options: UseAdminUsersOptions = {}) {
     [fetchUsers, pagination.page]
   );
 
+  const deleteUser = useCallback(
+    async (userId: string): Promise<{ ok: true } | { ok: false; error: string }> => {
+      const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        return { ok: false, error: data?.error ?? "삭제에 실패했습니다." };
+      }
+      await fetchUsers(pagination.page);
+      return { ok: true };
+    },
+    [fetchUsers, pagination.page]
+  );
+
   return {
     users,
     pagination,
@@ -134,5 +147,6 @@ export function useAdminUsers(options: UseAdminUsersOptions = {}) {
     toggleRole,
     approveUser,
     approveRenewal,
+    deleteUser,
   };
 }

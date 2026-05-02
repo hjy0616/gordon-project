@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireActiveUser } from "@/lib/auth-utils";
 import { findMutablePost } from "@/lib/board-guards";
 import { sanitizePostHtml } from "@/lib/sanitize-html";
+import { withResolvedAuthorImage } from "@/lib/avatar";
 
 export async function GET(
   _req: Request,
@@ -30,7 +31,9 @@ export async function GET(
     return NextResponse.json({ error: "게시글을 찾을 수 없습니다." }, { status: 404 });
   }
 
-  return NextResponse.json({ post });
+  const postWithAvatar = await withResolvedAuthorImage(post);
+
+  return NextResponse.json({ post: postWithAvatar });
 }
 
 export async function PUT(

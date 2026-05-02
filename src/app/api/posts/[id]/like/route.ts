@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireActiveUser } from "@/lib/auth-utils";
 import { findMutablePost } from "@/lib/board-guards";
+import { trackEvent } from "@/lib/analytics";
 
 export async function POST(
   _req: Request,
@@ -28,6 +29,11 @@ export async function POST(
     await prisma.postLike.delete({ where: { id: existing.id } });
   } else {
     await prisma.postLike.create({ data: { postId, userId: user.id } });
+    await trackEvent({
+      userId: user.id,
+      type: "post.like",
+      props: { postId },
+    });
   }
 
   const count = await prisma.postLike.count({ where: { postId } });

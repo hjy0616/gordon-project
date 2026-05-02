@@ -111,6 +111,13 @@ export default function RegisterPage() {
     formData.append("password", password);
     formData.append("verificationImage", imageFile);
 
+    const params = new URLSearchParams(window.location.search);
+    const utmSource = params.get("utm_source") ?? "";
+    if (utmSource) formData.append("utmSource", utmSource);
+    if (typeof document !== "undefined" && document.referrer) {
+      formData.append("referer", document.referrer);
+    }
+
     const res = await fetch("/api/auth/register", {
       method: "POST",
       body: formData,

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import {
   ChevronRight,
@@ -19,6 +19,7 @@ import {
   Moon,
   Shield,
   Sun,
+  UserCog,
 } from "lucide-react";
 import { useBoards } from "@/lib/queries/use-boards";
 import {
@@ -33,7 +34,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sidebar,
   SidebarContent,
@@ -57,19 +58,29 @@ const mapSubItems = [
   { title: "Secret Treasure Map", href: "/map/secret-treasure-map", icon: MapPin },
 ];
 
-function NavUser() {
-  const { data: session } = useSession();
+type NavUserData = {
+  name: string | null;
+  email: string;
+  role: string;
+};
+
+function NavUser({
+  user,
+  avatarUrl,
+}: {
+  user: NavUserData;
+  avatarUrl: string | null;
+}) {
   const { theme, setTheme } = useTheme();
 
-  const user = session?.user;
-  const initials = user?.name
+  const initials = user.name
     ? user.name
         .split(" ")
         .map((n) => n[0])
         .join("")
         .toUpperCase()
         .slice(0, 2)
-    : user?.email?.[0]?.toUpperCase() ?? "?";
+    : user.email[0]?.toUpperCase() ?? "?";
 
   return (
     <SidebarMenu>
@@ -79,16 +90,23 @@ function NavUser() {
             render={<SidebarMenuButton size="lg" />}
           >
             <Avatar className="size-8 rounded-lg">
+              {avatarUrl ? (
+                <AvatarImage
+                  src={avatarUrl}
+                  alt={user.name ?? user.email}
+                  className="rounded-lg"
+                />
+              ) : null}
               <AvatarFallback className="rounded-lg">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-semibold">
-                {user?.name || "사용자"}
+                {user.name || "사용자"}
               </span>
               <span className="truncate text-xs text-muted-foreground">
-                {user?.email || ""}
+                {user.email}
               </span>
             </div>
             <ChevronsUpDown className="ml-auto size-4" />
@@ -108,14 +126,16 @@ function NavUser() {
               )}
               {theme === "dark" ? "라이트 모드" : "다크 모드"}
             </DropdownMenuItem>
-            {user?.role === "ADMIN" && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem render={<Link href="/admin" />}>
-                  <Shield className="mr-2 size-4" />
-                  Admin
-                </DropdownMenuItem>
-              </>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem render={<Link href="/account" />}>
+              <UserCog className="mr-2 size-4" />
+              개인정보 수정
+            </DropdownMenuItem>
+            {user.role === "ADMIN" && (
+              <DropdownMenuItem render={<Link href="/admin" />}>
+                <Shield className="mr-2 size-4" />
+                Admin
+              </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -131,8 +151,13 @@ function NavUser() {
   );
 }
 
-export function AppSidebar() {
-  const { data: session } = useSession();
+export function AppSidebar({
+  user,
+  avatarUrl,
+}: {
+  user: NavUserData;
+  avatarUrl: string | null;
+}) {
   const pathname = usePathname();
   const isMapActive = pathname.startsWith("/map");
   const isBoardActive = pathname.startsWith("/board");
@@ -270,7 +295,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarRenewalStatus />
         <SidebarSeparator />
-        <NavUser />
+        <NavUser user={user} avatarUrl={avatarUrl} />
       </SidebarFooter>
 
       <SidebarRail />

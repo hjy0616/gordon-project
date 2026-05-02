@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireActiveUser } from "@/lib/auth-utils";
 import { sanitizePostHtml } from "@/lib/sanitize-html";
+import { trackEvent } from "@/lib/analytics";
+import { withResolvedAuthorImages } from "@/lib/avatar";
 
 export async function GET(
   req: Request,
@@ -44,8 +46,10 @@ export async function GET(
     prisma.post.count({ where: { boardId: board.id } }),
   ]);
 
+  const postsWithAvatars = await withResolvedAuthorImages(posts);
+
   return NextResponse.json({
-    posts,
+    posts: postsWithAvatars,
     pagination: {
       page,
       limit,
@@ -101,6 +105,13 @@ export async function POST(
       content,
     },
     select: { id: true },
+  });
+
+  await trackEvent({
+    userId: user.id,
+    type: "post.create",
+    path: post.id,
+    props: { postId: post.id, boardSlug: slug },
   });
 
   return NextResponse.json(post, { status: 201 });

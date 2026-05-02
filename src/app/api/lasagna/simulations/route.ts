@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth-utils";
+import { trackEvent } from "@/lib/analytics";
 import type { SimulationStatus } from "@/generated/prisma/enums";
 import type { Simulation } from "@/types/lasagna";
 
@@ -89,6 +90,13 @@ export async function POST(req: Request) {
     },
   });
 
+  await trackEvent({
+    userId: user.id,
+    type: "lasagna.start",
+    label: row.title,
+    props: { simulationId: row.id, eventType: row.eventType },
+  });
+
   return NextResponse.json(toClient(row), { status: 201 });
 }
 
@@ -116,6 +124,38 @@ export async function PUT(req: Request) {
   if (fields.myAnalysis !== undefined) data.myAnalysis = fields.myAnalysis;
   if (fields.flowNodes !== undefined) data.flowNodes = fields.flowNodes;
   if (fields.flowEdges !== undefined) data.flowEdges = fields.flowEdges;
+
+  if (fields.status === "completed") {
+    // Atomic transition: only fire trackEvent when this request is the one
+    // that flips status from non-completed to completed.
+    const transition = await prisma.lasagnaSimulation.updateMany({
+      where: { id, userId: user.id, status: { not: "completed" } },
+      data,
+    });
+
+    if (transition.count === 1) {
+      await trackEvent({
+        userId: user.id,
+        type: "lasagna.complete",
+        path: id,
+        props: { simulationId: id },
+      });
+      return NextResponse.json({ updated: 1 });
+    }
+
+    // Already completed — apply non-status field updates so the UI's
+    // last-write still wins for analysis text, etc.
+    const dataWithoutStatus: Record<string, unknown> = { ...data };
+    delete dataWithoutStatus.status;
+    if (Object.keys(dataWithoutStatus).length > 0) {
+      const after = await prisma.lasagnaSimulation.updateMany({
+        where: { id, userId: user.id },
+        data: dataWithoutStatus,
+      });
+      return NextResponse.json({ updated: after.count });
+    }
+    return NextResponse.json({ updated: 0 });
+  }
 
   const updated = await prisma.lasagnaSimulation.updateMany({
     where: { id, userId: user.id },

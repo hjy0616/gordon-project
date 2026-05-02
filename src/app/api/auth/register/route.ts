@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@/lib/prisma";
 import { uploadToS3 } from "@/lib/s3";
+import { classifyInflowSource } from "@/lib/inflow-source";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -14,6 +15,11 @@ export async function POST(req: Request) {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const image = formData.get("verificationImage") as File | null;
+    const utmSource =
+      (formData.get("utmSource") as string | null)?.trim().slice(0, 100) || null;
+    const referer =
+      (formData.get("referer") as string | null)?.trim().slice(0, 500) || null;
+    const signupSource = classifyInflowSource({ utmSource, referer });
 
     if (!email || !password) {
       return NextResponse.json(
@@ -69,18 +75,28 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(await image.arrayBuffer());
     await uploadToS3(buffer, s3Key, image.type);
 
-    const user = await prisma.user.create({
-      data: {
-        id: userId,
-        name: name || null,
-        email,
-        password: hashedPassword,
-        verificationImage: s3Key,
-      },
-    });
-
-    await prisma.userPreference.create({
-      data: { userId: user.id },
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          id: userId,
+          name: name || null,
+          email,
+          password: hashedPassword,
+          verificationImage: s3Key,
+          signupSource,
+          signupReferer: referer,
+        },
+      });
+      await tx.userPreference.create({ data: { userId: created.id } });
+      await tx.userStatusLog.create({
+        data: {
+          userId: created.id,
+          fromStatus: null,
+          toStatus: "PENDING",
+          reason: "registration",
+        },
+      });
+      return created;
     });
 
     return NextResponse.json(

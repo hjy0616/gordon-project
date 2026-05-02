@@ -47,5 +47,6 @@ docs/*
 CLAUDE.md
 AGENTS.md
 .serena/*
+scripts/*
 
 /src/generated/prisma

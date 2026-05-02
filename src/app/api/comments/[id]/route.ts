@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireActiveUser } from "@/lib/auth-utils";
 import { findMutableComment } from "@/lib/board-guards";
+import { withResolvedAuthorImage } from "@/lib/avatar";
 
 const MAX_COMMENT_LENGTH = 2000;
 
@@ -50,7 +51,9 @@ export async function PUT(
     },
   });
 
-  return NextResponse.json(updated);
+  const updatedWithAvatar = await withResolvedAuthorImage(updated);
+
+  return NextResponse.json(updatedWithAvatar);
 }
 
 export async function DELETE(
