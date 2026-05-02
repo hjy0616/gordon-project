@@ -466,6 +466,8 @@ model Kpi {
   name           String
   description    String?
   target         Float?
+  targetDate     DateTime? @map("target_date")
+  startValue     Float?    @map("start_value")
   unit           String    @default("percent")
   period         String    @default("monthly")
   currentValue   Float?    @map("current_value")

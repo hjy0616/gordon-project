@@ -78,7 +78,7 @@ export function DataRightsTab({ radarScores, districtId }: DataRightsTabProps) {
       {/* Dual radar chart */}
       <div ref={chartRef} className="h-[260px] w-full">
         {chartReady && (
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
             <RadarChart cx="50%" cy="50%" outerRadius="72%" data={data}>
               <PolarGrid stroke="rgba(255,255,255,0.15)" />
               <PolarAngleAxis

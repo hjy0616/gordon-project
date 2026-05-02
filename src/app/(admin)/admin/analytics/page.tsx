@@ -6,7 +6,7 @@ export default function AdminAnalyticsPage() {
       <div>
         <h1 className="text-2xl font-bold">Analytics</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          실시간 / 성장 / 리텐션 / 이탈 / 유입 / 참여 / Wow·Pain / KPI
+          실시간 / 유저 활동 / 성장 / 리텐션 / 이탈 / 유입 / 참여 / Wow·Pain / KPI
         </p>
       </div>
 

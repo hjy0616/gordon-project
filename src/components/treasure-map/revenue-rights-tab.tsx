@@ -133,7 +133,7 @@ export function RevenueRightsTab({
       </h4>
       <div ref={chartRef} className="h-[240px] w-full">
         {chartReady && (
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
             <BarChart
               data={data}
               margin={{ top: 8, right: 8, left: -12, bottom: 0 }}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Clock, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 type EngagementData = {
   range: string;
   avgDurationSec: number;
+  p50DurationSec: number;
+  p90DurationSec: number;
   totalSessions: number;
-  hourlyHeatmap: Array<{ dow: number; hour: number; count: number }>;
 };
 
 async function fetchEngagement(range: string): Promise<EngagementData> {
@@ -20,8 +21,9 @@ async function fetchEngagement(range: string): Promise<EngagementData> {
     return {
       range,
       avgDurationSec: 0,
+      p50DurationSec: 0,
+      p90DurationSec: 0,
       totalSessions: 0,
-      hourlyHeatmap: [],
     };
   }
   return res.json();
@@ -32,8 +34,6 @@ const RANGES = [
   { key: "30d", label: "30일" },
   { key: "90d", label: "90일" },
 ];
-
-const DOW_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 
 function formatDuration(sec: number): string {
   if (sec < 60) return `${sec}초`;
@@ -54,19 +54,6 @@ export function EngagementSection() {
     staleTime: 5 * 60_000,
   });
 
-  const heatmapMatrix = useMemo(() => {
-    const matrix: number[][] = Array.from({ length: 7 }, () =>
-      Array.from({ length: 24 }, () => 0),
-    );
-    data?.hourlyHeatmap.forEach((cell) => {
-      if (cell.dow >= 0 && cell.dow < 7 && cell.hour >= 0 && cell.hour < 24) {
-        matrix[cell.dow][cell.hour] = cell.count;
-      }
-    });
-    const max = Math.max(1, ...matrix.flat());
-    return { matrix, max };
-  }, [data]);
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end gap-1">
@@ -82,7 +69,7 @@ export function EngagementSection() {
         ))}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -107,6 +94,44 @@ export function EngagementSection() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
+              P50 (중앙값)
+            </CardTitle>
+            <Clock className="size-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                formatDuration(data?.p50DurationSec ?? 0)
+              )}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">유저 절반은 이 이상</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              P90
+            </CardTitle>
+            <Clock className="size-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                formatDuration(data?.p90DurationSec ?? 0)
+              )}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">상위 10% 이 이상</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               총 세션 수
             </CardTitle>
             <Users className="size-4 text-foreground" />
@@ -122,69 +147,12 @@ export function EngagementSection() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">활동 시간대 (요일 × 시간)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-[200px] w-full" />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="text-xs">
-                <thead>
-                  <tr>
-                    <th className="px-2 py-1"></th>
-                    {Array.from({ length: 24 }, (_, h) => (
-                      <th
-                        key={h}
-                        className="px-1 py-1 text-center text-muted-foreground"
-                        style={{ minWidth: 18 }}
-                      >
-                        {h % 6 === 0 ? h : ""}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {heatmapMatrix.matrix.map((row, dow) => (
-                    <tr key={dow}>
-                      <td className="px-2 py-1 text-muted-foreground">
-                        {DOW_LABELS[dow]}
-                      </td>
-                      {row.map((count, hour) => {
-                        const intensity =
-                          count > 0 ? 0.15 + (count / heatmapMatrix.max) * 0.85 : 0;
-                        return (
-                          <td
-                            key={hour}
-                            title={`${DOW_LABELS[dow]} ${hour}시: ${count}`}
-                            className="border border-border/30"
-                            style={{
-                              minWidth: 18,
-                              height: 22,
-                              backgroundColor:
-                                count > 0
-                                  ? `oklch(0.7 0.18 50 / ${intensity})`
-                                  : "transparent",
-                            }}
-                          />
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">페이지별 방문 / 유입 도메인</CardTitle>
+          <CardTitle className="text-base">페이지별 방문 / 시간대 / 유입 도메인</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="py-4 text-sm text-muted-foreground">
-            페이지별 방문수, Top Pages, Top Referrers(naver/google 등 도메인), 디바이스/지역 분석은
+            페이지별 방문수, Top Pages, Top Referrers(naver/google 등 도메인), 시간대별 트래픽,
+            디바이스/지역 분석은
             <a
               href="https://vercel.com/docs/analytics"
               target="_blank"

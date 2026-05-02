@@ -1,28 +1,32 @@
 "use client";
 
-import { useRef, useState, useEffect, type RefObject } from "react";
+import { useCallback, useState } from "react";
 
-/**
- * ResponsiveContainer가 -1 치수를 측정하는 문제를 방지하기 위해
- * 컨테이너가 양수 크기를 가질 때까지 차트 렌더링을 지연시키는 hook.
- */
+// callback ref 패턴 — div가 늦게 mount되어도 (e.g. isLoading 분기로 Skeleton 후 swap) attach 시점에
+// observer를 설치한다. useEffect+useRef는 mount 후 ref 변경을 감지 못해 ready가 영원히 false에 머물던 race를 회피.
 export function useChartReady(): {
-  ref: RefObject<HTMLDivElement | null>;
+  ref: (node: HTMLDivElement | null) => void;
   ready: boolean;
 } {
-  const ref = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+  const ref = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+
+    const initial = node.getBoundingClientRect();
+    if (initial.width > 0 && initial.height > 0) {
+      setReady(true);
+      return;
+    }
 
     const observer = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
-      setReady(width > 0 && height > 0);
+      if (width > 0 && height > 0) {
+        setReady(true);
+        observer.disconnect();
+      }
     });
-
-    observer.observe(el);
+    observer.observe(node);
     return () => observer.disconnect();
   }, []);
 

@@ -13,16 +13,12 @@ const RANGE_DAYS: Record<string, number> = {
 
 type DurationRow = {
   avg_sec: number | null;
+  p50_sec: number | null;
+  p90_sec: number | null;
   total_sessions: bigint;
 };
 
-type HeatmapRow = {
-  dow: number;
-  hour: number;
-  count: bigint;
-};
-
-// byPath는 Vercel Web Analytics(Top Pages)에 위임
+// byPath / 시간대 heatmap은 Vercel Web Analytics에 위임
 
 export async function GET(req: Request) {
   const admin = await getAdminUser();
@@ -38,40 +34,26 @@ export async function GET(req: Request) {
   const data = await getCachedJson(cacheKey, 5 * 60 * 1000, async () => {
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-    const [durationRows, heatmapRows] = await Promise.all([
-      prisma.$queryRaw<DurationRow[]>`
-        SELECT
-          AVG(EXTRACT(EPOCH FROM (COALESCE(ended_at, last_seen_at) - started_at)))::float AS avg_sec,
-          COUNT(*)::bigint AS total_sessions
-        FROM user_sessions
-        WHERE started_at >= ${since};
-      `,
-      prisma.$queryRaw<HeatmapRow[]>`
-        SELECT
-          EXTRACT(DOW FROM last_seen_at)::int AS dow,
-          EXTRACT(HOUR FROM last_seen_at)::int AS hour,
-          COUNT(*)::bigint AS count
-        FROM user_sessions
-        WHERE last_seen_at >= ${since}
-        GROUP BY dow, hour
-        ORDER BY dow, hour;
-      `,
-    ]);
+    const durationRows = await prisma.$queryRaw<DurationRow[]>`
+      SELECT
+        AVG(EXTRACT(EPOCH FROM (COALESCE(ended_at, last_seen_at) - started_at)))::float AS avg_sec,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (COALESCE(ended_at, last_seen_at) - started_at)))::float AS p50_sec,
+        PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (COALESCE(ended_at, last_seen_at) - started_at)))::float AS p90_sec,
+        COUNT(*)::bigint AS total_sessions
+      FROM user_sessions
+      WHERE started_at >= ${since};
+    `;
 
     const durationRow = durationRows[0];
-    const avgDurationSec = durationRow?.avg_sec
-      ? Math.round(Number(durationRow.avg_sec))
-      : 0;
+    const round = (v: number | null | undefined) =>
+      v != null ? Math.round(Number(v)) : 0;
 
     return {
       range: rangeKey,
-      avgDurationSec,
+      avgDurationSec: round(durationRow?.avg_sec),
+      p50DurationSec: round(durationRow?.p50_sec),
+      p90DurationSec: round(durationRow?.p90_sec),
       totalSessions: durationRow ? Number(durationRow.total_sessions) : 0,
-      hourlyHeatmap: heatmapRows.map((r) => ({
-        dow: r.dow,
-        hour: r.hour,
-        count: Number(r.count),
-      })),
     };
   });
 

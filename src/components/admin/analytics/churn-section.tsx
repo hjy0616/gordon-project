@@ -12,7 +12,6 @@ type ChurnData = {
   churnRate: number;
   churnedCount: number;
   totalAtRiskStart: number;
-  byReason: Array<{ reason: string; count: number }>;
   expiringSoon: Array<{
     id: string;
     name: string | null;
@@ -29,7 +28,6 @@ async function fetchChurn(range: string): Promise<ChurnData> {
       churnRate: 0,
       churnedCount: 0,
       totalAtRiskStart: 0,
-      byReason: [],
       expiringSoon: [],
     };
   }
@@ -119,64 +117,37 @@ export function ChurnSection() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">이탈 사유</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-32 w-full" />
-            ) : data?.byReason.length === 0 ? (
-              <p className="py-4 text-sm text-muted-foreground">기록된 이탈 없음</p>
-            ) : (
-              <ul className="space-y-2">
-                {data?.byReason.map((r) => (
-                  <li
-                    key={r.reason}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <span className="truncate text-muted-foreground">{r.reason}</span>
-                    <span className="font-mono">{r.count}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="size-4 text-orange-500" />
-              만료 임박 (14일 이내)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-32 w-full" />
-            ) : data?.expiringSoon.length === 0 ? (
-              <p className="py-4 text-sm text-muted-foreground">없음</p>
-            ) : (
-              <ul className="space-y-2">
-                {data?.expiringSoon.map((u) => (
-                  <li key={u.id} className="flex items-center justify-between text-sm">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{u.name || "이름 없음"}</p>
-                      <p className="truncate text-xs text-muted-foreground">{u.email}</p>
-                    </div>
-                    <span className="ml-2 shrink-0 font-mono text-xs text-orange-500">
-                      {u.activeUntil
-                        ? new Date(u.activeUntil).toLocaleDateString("ko-KR")
-                        : "—"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <AlertTriangle className="size-4 text-orange-500" />
+            만료 임박 (14일 이내)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <Skeleton className="h-32 w-full" />
+          ) : data?.expiringSoon.length === 0 ? (
+            <p className="py-4 text-sm text-muted-foreground">없음</p>
+          ) : (
+            <ul className="space-y-2">
+              {data?.expiringSoon.map((u) => (
+                <li key={u.id} className="flex items-center justify-between text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{u.name || "이름 없음"}</p>
+                    <p className="truncate text-xs text-muted-foreground">{u.email}</p>
+                  </div>
+                  <span className="ml-2 shrink-0 font-mono text-xs text-orange-500">
+                    {u.activeUntil
+                      ? new Date(u.activeUntil).toLocaleDateString("ko-KR")
+                      : "—"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

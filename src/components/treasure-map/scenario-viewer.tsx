@@ -63,7 +63,7 @@ export function ScenarioViewer({ district }: ScenarioViewerProps) {
 
       <div ref={chartRef} className="h-[280px] w-full">
         {chartReady && (
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
             <LineChart data={scenarioData}>
               <CartesianGrid
                 strokeDasharray="3 3"

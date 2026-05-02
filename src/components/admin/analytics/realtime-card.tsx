@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Activity, UserPlus, Users, Sparkles } from "lucide-react";
+import { Activity, UserPlus, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -9,9 +9,6 @@ type RealtimeData = {
   active5m: number;
   active30m: number;
   newSignupsToday: number;
-  dau: number;
-  wau: number;
-  mau: number;
   activationRate: number;
   totalUsers: number;
   activatedUsers: number;
@@ -24,9 +21,6 @@ async function fetchRealtime(): Promise<RealtimeData> {
       active5m: 0,
       active30m: 0,
       newSignupsToday: 0,
-      dau: 0,
-      wau: 0,
-      mau: 0,
       activationRate: 0,
       totalUsers: 0,
       activatedUsers: 0,
@@ -80,32 +74,10 @@ export function RealtimeSection() {
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          title="DAU"
-          value={data?.dau}
-          icon={Users}
-          accent="text-foreground"
-          description="24시간 활성 유저"
-          loading={isLoading}
-        />
-        <StatCard
-          title="WAU"
-          value={data?.wau}
-          icon={Users}
-          accent="text-foreground"
-          description="7일 활성 유저"
-          loading={isLoading}
-        />
-        <StatCard
-          title="MAU"
-          value={data?.mau}
-          icon={Users}
-          accent="text-foreground"
-          description="30일 활성 유저"
-          loading={isLoading}
-        />
-      </div>
+      <p className="text-xs text-muted-foreground">
+        DAU / WAU / MAU 등 기간 활동지표는 <span className="font-medium">유저 활동</span> 탭에서
+        확인하세요. (5분 캐시, 액션 기준)
+      </p>
     </div>
   );
 }

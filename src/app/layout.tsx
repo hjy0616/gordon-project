@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 import { Analytics } from "@vercel/analytics/next";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { RechartsWarningFilter } from "@/components/recharts-warning-filter";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -49,6 +50,7 @@ export default function RootLayout({
         >
           <SessionProvider>
             <TooltipProvider>
+              <RechartsWarningFilter />
               {children}
             </TooltipProvider>
           </SessionProvider>

@@ -13,6 +13,8 @@ type CohortsData = {
     size: number;
     retention: { d1: number; d7: number; d30: number };
     retainedCount: { d1: number; d7: number; d30: number };
+    activation: { firstPost7d: number; firstLasagna7d: number };
+    activationCount: { firstPost7d: number; firstLasagna7d: number };
   }>;
 };
 
@@ -74,6 +76,8 @@ export function CohortSection() {
                   <th className="px-2 py-2 text-right">D1</th>
                   <th className="px-2 py-2 text-right">D7</th>
                   <th className="px-2 py-2 text-right">D30</th>
+                  <th className="px-2 py-2 text-right">첫 글(7일)</th>
+                  <th className="px-2 py-2 text-right">첫 시뮬(7일)</th>
                 </tr>
               </thead>
               <tbody>
@@ -89,6 +93,18 @@ export function CohortSection() {
                     </td>
                     <td className="px-2 py-2 text-right">
                       <RetentionCell rate={c.retention.d30} count={c.retainedCount.d30} />
+                    </td>
+                    <td className="px-2 py-2 text-right">
+                      <ActivationCell
+                        rate={c.activation.firstPost7d}
+                        count={c.activationCount.firstPost7d}
+                      />
+                    </td>
+                    <td className="px-2 py-2 text-right">
+                      <ActivationCell
+                        rate={c.activation.firstLasagna7d}
+                        count={c.activationCount.firstLasagna7d}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -109,6 +125,22 @@ function RetentionCell({ rate, count }: { rate: number; count: number }) {
       className="inline-flex items-center justify-end gap-2 rounded px-2 py-0.5"
       style={{
         backgroundColor: `oklch(0.75 0.15 50 / ${opacity})`,
+      }}
+    >
+      <span className="font-mono text-xs">{pct}%</span>
+      <span className="text-xs text-muted-foreground">({count})</span>
+    </div>
+  );
+}
+
+function ActivationCell({ rate, count }: { rate: number; count: number }) {
+  const pct = Math.round(rate * 100);
+  const opacity = Math.min(1, 0.15 + rate * 0.85);
+  return (
+    <div
+      className="inline-flex items-center justify-end gap-2 rounded px-2 py-0.5"
+      style={{
+        backgroundColor: `oklch(0.78 0.16 145 / ${opacity})`,
       }}
     >
       <span className="font-mono text-xs">{pct}%</span>

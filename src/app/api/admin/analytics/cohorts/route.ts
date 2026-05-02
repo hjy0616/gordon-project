@@ -11,6 +11,8 @@ type CohortRow = {
   d1: bigint;
   d7: bigint;
   d30: bigint;
+  first_post_7d: bigint;
+  first_lasagna_7d: bigint;
 };
 
 export async function GET(req: Request) {
@@ -38,16 +40,26 @@ export async function GET(req: Request) {
           created_at
         FROM users
         WHERE created_at >= $1
+      ),
+      first_post AS (
+        SELECT author_id AS user_id, MIN(created_at) AS first_at FROM posts GROUP BY author_id
+      ),
+      first_lasagna AS (
+        SELECT user_id, MIN(created_at) AS first_at FROM lasagna_simulations GROUP BY user_id
       )
       SELECT
-        cohort_date,
+        c.cohort_date,
         COUNT(*)::bigint AS size,
-        COUNT(*) FILTER (WHERE last_active_at >= cohort_date + INTERVAL '1 day')::bigint AS d1,
-        COUNT(*) FILTER (WHERE last_active_at >= cohort_date + INTERVAL '7 days')::bigint AS d7,
-        COUNT(*) FILTER (WHERE last_active_at >= cohort_date + INTERVAL '30 days')::bigint AS d30
-      FROM cohort
-      GROUP BY cohort_date
-      ORDER BY cohort_date DESC
+        COUNT(*) FILTER (WHERE c.last_active_at >= c.cohort_date + INTERVAL '1 day')::bigint AS d1,
+        COUNT(*) FILTER (WHERE c.last_active_at >= c.cohort_date + INTERVAL '7 days')::bigint AS d7,
+        COUNT(*) FILTER (WHERE c.last_active_at >= c.cohort_date + INTERVAL '30 days')::bigint AS d30,
+        COUNT(*) FILTER (WHERE fp.first_at IS NOT NULL AND fp.first_at < c.cohort_date + INTERVAL '7 days')::bigint AS first_post_7d,
+        COUNT(*) FILTER (WHERE fl.first_at IS NOT NULL AND fl.first_at < c.cohort_date + INTERVAL '7 days')::bigint AS first_lasagna_7d
+      FROM cohort c
+      LEFT JOIN first_post fp ON fp.user_id = c.id
+      LEFT JOIN first_lasagna fl ON fl.user_id = c.id
+      GROUP BY c.cohort_date
+      ORDER BY c.cohort_date DESC
       LIMIT 30;
       `,
       since,
@@ -67,6 +79,14 @@ export async function GET(req: Request) {
           d1: Number(r.d1),
           d7: Number(r.d7),
           d30: Number(r.d30),
+        },
+        activation: {
+          firstPost7d: size > 0 ? Number(r.first_post_7d) / size : 0,
+          firstLasagna7d: size > 0 ? Number(r.first_lasagna_7d) / size : 0,
+        },
+        activationCount: {
+          firstPost7d: Number(r.first_post_7d),
+          firstLasagna7d: Number(r.first_lasagna_7d),
         },
       };
     });

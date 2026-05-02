@@ -72,7 +72,7 @@ export function FearGreedChart({ data }: FearGreedChartProps) {
   return (
     <div ref={ref} className="h-[120px] w-full">
       {ready && (
-        <ResponsiveContainer width="100%" height={120} minWidth={0}>
+        <ResponsiveContainer width="100%" height={120} minWidth={0} minHeight={1}>
           <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
             <XAxis
               dataKey="timestamp"

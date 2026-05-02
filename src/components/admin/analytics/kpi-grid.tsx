@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Pencil, Check, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,10 +15,13 @@ type Kpi = {
   name: string;
   description: string | null;
   target: number | null;
+  targetDate: string | null;
+  startValue: number | null;
   unit: "percent" | "count" | "minute" | string;
   period: "daily" | "weekly" | "monthly" | string;
   currentValue: number | null;
   lastComputedAt: string | null;
+  createdAt: string;
   isAuto: boolean;
 };
 
@@ -193,6 +196,45 @@ function KpiCard({
   const unitSuffix =
     kpi.unit === "percent" ? "%" : kpi.unit === "minute" ? "분" : "";
 
+  // Milestone — createdAt(시작 시점) → targetDate(목표 시점) 사이의 진행률 vs 값 진행률 비교
+  // Date.now()는 impure이라 useEffect에서 분 단위로 동기화 (첫 동기화는 마이크로태스크로 미뤄 cascading render 회피)
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    queueMicrotask(() => setNow(Date.now()));
+    const id = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const milestone = useMemo(() => {
+    if (!kpi.targetDate || kpi.target === null || now === null) return null;
+    const target = kpi.target;
+    const start = kpi.startValue ?? 0;
+    const startTime = new Date(kpi.createdAt).getTime();
+    const targetTime = new Date(kpi.targetDate).getTime();
+    const daysLeft = Math.ceil((targetTime - now) / (1000 * 60 * 60 * 24));
+
+    let onPace: boolean | null = null;
+    if (kpi.currentValue !== null && targetTime > startTime && target !== start) {
+      const timeProgress = Math.min(
+        1,
+        Math.max(0, (now - startTime) / (targetTime - startTime)),
+      );
+      const valueProgress = Math.min(
+        1,
+        Math.max(0, (kpi.currentValue - start) / (target - start)),
+      );
+      onPace = valueProgress >= timeProgress;
+    }
+    return { daysLeft, onPace };
+  }, [
+    kpi.targetDate,
+    kpi.target,
+    kpi.startValue,
+    kpi.currentValue,
+    kpi.createdAt,
+    now,
+  ]);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
@@ -240,6 +282,27 @@ function KpiCard({
             />
           </div>
         )}
+        {milestone && (
+          <div className="mt-2 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">
+              마일스톤: {new Date(kpi.targetDate as string).toLocaleDateString("ko-KR")}
+              {milestone.daysLeft >= 0
+                ? ` · D-${milestone.daysLeft}`
+                : ` · ${Math.abs(milestone.daysLeft)}일 경과`}
+            </span>
+            {milestone.onPace !== null && (
+              <span
+                className={
+                  milestone.onPace
+                    ? "rounded bg-green-500/15 px-1.5 py-0.5 font-medium text-green-600 dark:text-green-400"
+                    : "rounded bg-orange-500/15 px-1.5 py-0.5 font-medium text-orange-600 dark:text-orange-400"
+                }
+              >
+                {milestone.onPace ? "On pace" : "Behind"}
+              </span>
+            )}
+          </div>
+        )}
         {kpi.description && (
           <p className="mt-2 text-xs text-muted-foreground">{kpi.description}</p>
         )}
@@ -260,13 +323,23 @@ function KpiCreateForm({
   error,
 }: {
   onCancel: () => void;
-  onSubmit: (body: { key: string; name: string; target: number | null; unit: string; period: string }) => void;
+  onSubmit: (body: {
+    key: string;
+    name: string;
+    target: number | null;
+    targetDate: string | null;
+    startValue: number | null;
+    unit: string;
+    period: string;
+  }) => void;
   submitting: boolean;
   error: string | null;
 }) {
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
   const [target, setTarget] = useState("");
+  const [targetDate, setTargetDate] = useState("");
+  const [startValue, setStartValue] = useState("");
   const [unit, setUnit] = useState("percent");
   const [period, setPeriod] = useState("monthly");
 
@@ -306,6 +379,25 @@ function KpiCreateForm({
             />
           </div>
           <div>
+            <Label htmlFor="kpi-target-date">마일스톤(목표 일자)</Label>
+            <Input
+              id="kpi-target-date"
+              type="date"
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="kpi-start-value">시작값 (선택)</Label>
+            <Input
+              id="kpi-start-value"
+              type="number"
+              value={startValue}
+              onChange={(e) => setStartValue(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+          <div>
             <Label htmlFor="kpi-unit">단위</Label>
             <select
               id="kpi-unit"
@@ -342,10 +434,13 @@ function KpiCreateForm({
             disabled={submitting || !key || !name}
             onClick={() => {
               const targetNum = target ? Number(target) : null;
+              const startNum = startValue ? Number(startValue) : null;
               onSubmit({
                 key,
                 name,
                 target: Number.isFinite(targetNum) ? (targetNum as number) : null,
+                targetDate: targetDate || null,
+                startValue: Number.isFinite(startNum) ? (startNum as number) : null,
                 unit,
                 period,
               });
@@ -374,6 +469,10 @@ function KpiEditCard({
 }) {
   const [name, setName] = useState(kpi.name);
   const [target, setTarget] = useState(kpi.target?.toString() ?? "");
+  const [targetDate, setTargetDate] = useState(
+    kpi.targetDate ? kpi.targetDate.slice(0, 10) : "",
+  );
+  const [startValue, setStartValue] = useState(kpi.startValue?.toString() ?? "");
   const [currentValue, setCurrentValue] = useState(kpi.currentValue?.toString() ?? "");
 
   return (
@@ -407,6 +506,24 @@ function KpiEditCard({
           />
         </div>
         <div>
+          <Label htmlFor={`edit-target-date-${kpi.id}`}>마일스톤(목표 일자)</Label>
+          <Input
+            id={`edit-target-date-${kpi.id}`}
+            type="date"
+            value={targetDate}
+            onChange={(e) => setTargetDate(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor={`edit-start-${kpi.id}`}>시작값 (선택)</Label>
+          <Input
+            id={`edit-start-${kpi.id}`}
+            type="number"
+            value={startValue}
+            onChange={(e) => setStartValue(e.target.value)}
+          />
+        </div>
+        <div>
           <Label htmlFor={`edit-current-${kpi.id}`}>현재값</Label>
           <Input
             id={`edit-current-${kpi.id}`}
@@ -431,9 +548,12 @@ function KpiEditCard({
             disabled={submitting}
             onClick={() => {
               const targetNum = target ? Number(target) : null;
+              const startNum = startValue ? Number(startValue) : null;
               const body: Partial<Kpi> = {
                 name,
                 target: Number.isFinite(targetNum) ? (targetNum as number) : null,
+                targetDate: targetDate || null,
+                startValue: Number.isFinite(startNum) ? (startNum as number) : null,
               };
               if (!kpi.isAuto) {
                 const currentNum = currentValue ? Number(currentValue) : null;

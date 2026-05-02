@@ -93,7 +93,7 @@ export function InflowSection() {
             ) : (
               <div ref={ref} className="h-[280px] w-full">
                 {ready && (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
                   <PieChart>
                     <Pie
                       data={data?.sources ?? []}

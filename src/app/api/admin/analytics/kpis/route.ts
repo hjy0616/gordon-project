@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminUser } from "@/lib/auth-utils";
 import {
+  AUTO_KPIS,
   ensureAndRefreshAutoKpis,
   isAutoKpiKeyPrefix,
 } from "@/lib/auto-kpis";
@@ -18,10 +19,19 @@ type KpiBody = {
   name?: string;
   description?: string | null;
   target?: number | null;
+  targetDate?: string | null;
+  startValue?: number | null;
   unit?: string;
   period?: string;
   currentValue?: number | null;
 };
+
+function parseTargetDate(v: unknown): Date | null | undefined {
+  if (v === null) return null;
+  if (typeof v !== "string" || !v) return undefined;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
 
 function shapeKpiRow(row: {
   id: string;
@@ -29,10 +39,13 @@ function shapeKpiRow(row: {
   name: string;
   description: string | null;
   target: number | null;
+  targetDate: Date | null;
+  startValue: number | null;
   unit: string;
   period: string;
   currentValue: number | null;
   lastComputedAt: Date | null;
+  createdAt: Date;
 }) {
   return {
     id: row.id,
@@ -40,13 +53,31 @@ function shapeKpiRow(row: {
     name: row.name,
     description: row.description,
     target: row.target,
+    targetDate: row.targetDate?.toISOString() ?? null,
+    startValue: row.startValue,
     unit: row.unit,
     period: row.period,
     currentValue: row.currentValue,
     lastComputedAt: row.lastComputedAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
     isAuto: isAutoKpiKeyPrefix(row.key),
   };
 }
+
+const KPI_SELECT = {
+  id: true,
+  key: true,
+  name: true,
+  description: true,
+  target: true,
+  targetDate: true,
+  startValue: true,
+  unit: true,
+  period: true,
+  currentValue: true,
+  lastComputedAt: true,
+  createdAt: true,
+} as const;
 
 export async function GET() {
   const admin = await getAdminUser();
@@ -63,20 +94,16 @@ export async function GET() {
   const rows = await prisma.kpi.findMany({
     where: { key: { startsWith: KPI_PREFIX } },
     orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      key: true,
-      name: true,
-      description: true,
-      target: true,
-      unit: true,
-      period: true,
-      currentValue: true,
-      lastComputedAt: true,
-    },
+    select: KPI_SELECT,
   });
 
-  return NextResponse.json({ kpis: rows.map(shapeKpiRow) });
+  // AUTO_KPIS 정의에서 빠진 deprecated kpi:auto:* row는 응답에서 숨긴다 (DB는 보존).
+  const activeAutoKeys = new Set(AUTO_KPIS.map((k) => k.key));
+  const visibleRows = rows.filter(
+    (r) => !isAutoKpiKeyPrefix(r.key) || activeAutoKeys.has(r.key),
+  );
+
+  return NextResponse.json({ kpis: visibleRows.map(shapeKpiRow) });
 }
 
 export async function POST(req: Request) {
@@ -102,6 +129,8 @@ export async function POST(req: Request) {
   const unit = ALLOWED_UNITS.has(body.unit ?? "") ? (body.unit as string) : "percent";
   const period = ALLOWED_PERIODS.has(body.period ?? "") ? (body.period as string) : "monthly";
 
+  const targetDateParsed = parseTargetDate(body.targetDate);
+
   const created = await prisma.kpi.create({
     data: {
       key: `${KPI_PREFIX}${rawKey}`,
@@ -109,22 +138,14 @@ export async function POST(req: Request) {
       description:
         typeof body.description === "string" ? body.description.slice(0, 500) : null,
       target: typeof body.target === "number" ? body.target : null,
+      targetDate: targetDateParsed === undefined ? null : targetDateParsed,
+      startValue: typeof body.startValue === "number" ? body.startValue : null,
       unit,
       period,
       currentValue: typeof body.currentValue === "number" ? body.currentValue : null,
       lastComputedAt: typeof body.currentValue === "number" ? new Date() : null,
     },
-    select: {
-      id: true,
-      key: true,
-      name: true,
-      description: true,
-      target: true,
-      unit: true,
-      period: true,
-      currentValue: true,
-      lastComputedAt: true,
-    },
+    select: KPI_SELECT,
   });
 
   return NextResponse.json(shapeKpiRow(created), { status: 201 });
@@ -158,6 +179,12 @@ export async function PUT(req: Request) {
       typeof body.description === "string" ? body.description.slice(0, 500) : null;
   if (body.target !== undefined)
     data.target = typeof body.target === "number" ? body.target : null;
+  if (body.targetDate !== undefined) {
+    const td = parseTargetDate(body.targetDate);
+    if (td !== undefined) data.targetDate = td;
+  }
+  if (body.startValue !== undefined)
+    data.startValue = typeof body.startValue === "number" ? body.startValue : null;
 
   if (!isAuto) {
     if (body.unit && ALLOWED_UNITS.has(body.unit)) data.unit = body.unit;
@@ -173,17 +200,7 @@ export async function PUT(req: Request) {
   const updated = await prisma.kpi.update({
     where: { id: body.id },
     data,
-    select: {
-      id: true,
-      key: true,
-      name: true,
-      description: true,
-      target: true,
-      unit: true,
-      period: true,
-      currentValue: true,
-      lastComputedAt: true,
-    },
+    select: KPI_SELECT,
   });
 
   return NextResponse.json(shapeKpiRow(updated));

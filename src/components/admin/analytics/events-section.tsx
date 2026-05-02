@@ -102,7 +102,7 @@ export function EventsSection() {
           ) : (
             <div ref={ref} className="h-[200px] w-full">
               {ready && (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
                 <BarChart
                   data={data?.timeline ?? []}
                   margin={{ top: 8, right: 16, bottom: 8, left: 0 }}

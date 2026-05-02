@@ -11,11 +11,6 @@ const RANGE_DAYS: Record<string, number> = {
   "90d": 90,
 };
 
-type ChurnByReasonRow = {
-  reason: string | null;
-  count: bigint;
-};
-
 type ExpiringRow = {
   id: string;
   name: string | null;
@@ -44,7 +39,7 @@ export async function GET(req: Request) {
 
     // 분모: 각 유저의 since 직전 최신 status가 ACTIVE인 유저 수
     // 분자: 그 중 현재 status가 ACTIVE가 아닌 유저 수
-    const [summaryRows, byReasonRows, expiringRows] = await Promise.all([
+    const [summaryRows, expiringRows] = await Promise.all([
       prisma.$queryRaw<ChurnSummaryRow[]>`
         WITH status_at_start AS (
           SELECT DISTINCT ON (user_id)
@@ -62,15 +57,6 @@ export async function GET(req: Request) {
           COUNT(*) FILTER (WHERE u.status <> 'ACTIVE')::bigint AS churned
         FROM active_at_start a
         JOIN users u ON u.id = a.user_id;
-      `,
-      prisma.$queryRaw<ChurnByReasonRow[]>`
-        SELECT COALESCE(reason, 'unknown') AS reason, COUNT(DISTINCT user_id)::bigint AS count
-        FROM user_status_logs
-        WHERE to_status IN ('EXPIRED', 'SUSPENDED')
-          AND created_at >= ${since}
-        GROUP BY reason
-        ORDER BY count DESC
-        LIMIT 10;
       `,
       prisma.$queryRaw<ExpiringRow[]>`
         SELECT id, name, email, active_until
@@ -94,10 +80,6 @@ export async function GET(req: Request) {
       churnRate,
       churnedCount,
       totalAtRiskStart,
-      byReason: byReasonRows.map((r) => ({
-        reason: r.reason ?? "unknown",
-        count: Number(r.count),
-      })),
       expiringSoon: expiringRows.map((r) => ({
         id: r.id,
         name: r.name,

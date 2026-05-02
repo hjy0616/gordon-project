@@ -76,7 +76,7 @@ export function GrowthSection() {
         ) : (
           <div ref={ref} className="h-[300px] w-full">
             {ready && (
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
               <LineChart
                 data={data?.daily ?? []}
                 margin={{ top: 8, right: 16, bottom: 8, left: 0 }}

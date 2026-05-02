@@ -1,11 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { computeMau, computeStickiness } from "./analytics/queries/mau";
-import { computeActiveMembers } from "./analytics/queries/active-members";
-import { computeNewSignups30d } from "./analytics/queries/new-signups";
+import { computeStickiness } from "./analytics/queries/mau";
 import { computeStatusChurnRate30d } from "./analytics/queries/status-churn";
 import { computeD30Retention } from "./analytics/queries/d30-retention";
 import { computeAvgSessionMinutes30d } from "./analytics/queries/avg-session";
-import { computeExpiring14d } from "./analytics/queries/expiring-soon";
 
 export const AUTO_KPI_PREFIX = "kpi:auto:";
 export const AUTO_KPI_TTL_MS = 5 * 60 * 1000;
@@ -25,16 +22,6 @@ export type AutoKpiDef = {
 
 export const AUTO_KPIS: AutoKpiDef[] = [
   {
-    key: `${AUTO_KPI_PREFIX}mau`,
-    name: "MAU (월간 활성 사용자)",
-    description:
-      "30일 안에 들어와서 활동한 일반 회원 수 (admin 제외). 결제와 무관, 사용 측면 지표.",
-    unit: "count",
-    period: "monthly",
-    defaultTarget: null,
-    compute: computeMau,
-  },
-  {
     key: `${AUTO_KPI_PREFIX}stickiness`,
     name: "DAU/MAU Stickiness",
     description:
@@ -43,25 +30,6 @@ export const AUTO_KPIS: AutoKpiDef[] = [
     period: "monthly",
     defaultTarget: 20,
     compute: computeStickiness,
-  },
-  {
-    key: `${AUTO_KPI_PREFIX}active_members`,
-    name: "승인된 회원 (멤버십 유효)",
-    description:
-      "admin 이 승인했고 activeUntil 이 미만료인 일반 회원 수. 결제 아닌 수동 승인 기반.",
-    unit: "count",
-    period: "monthly",
-    defaultTarget: null,
-    compute: computeActiveMembers,
-  },
-  {
-    key: `${AUTO_KPI_PREFIX}new_signups_30d`,
-    name: "신규 가입(30d)",
-    description: "최근 30일 가입 신청자 수. 멤버십 승인 여부와 무관.",
-    unit: "count",
-    period: "monthly",
-    defaultTarget: null,
-    compute: computeNewSignups30d,
   },
   {
     key: `${AUTO_KPI_PREFIX}status_churn_30d`,
@@ -92,16 +60,6 @@ export const AUTO_KPIS: AutoKpiDef[] = [
     defaultTarget: 5,
     compute: computeAvgSessionMinutes30d,
   },
-  {
-    key: `${AUTO_KPI_PREFIX}expiring_14d`,
-    name: "만료 임박 14일 (수동 갱신 대상)",
-    description:
-      "activeUntil 이 14일 내 만료되는 회원 수. admin 이 수동으로 활성 기간을 연장할 대상.",
-    unit: "count",
-    period: "monthly",
-    defaultTarget: null,
-    compute: computeExpiring14d,
-  },
 ];
 
 const AUTO_KPI_KEYS = new Set(AUTO_KPIS.map((k) => k.key));
@@ -116,6 +74,11 @@ export function isAutoKpiKeyPrefix(key: string): boolean {
 
 export async function ensureAndRefreshAutoKpis(): Promise<void> {
   const staleCutoff = new Date(Date.now() - AUTO_KPI_TTL_MS);
+
+  // NOTE: AUTO_KPIS 정의에서 빠진 kpi:auto:* row는 DB에서 삭제하지 않는다.
+  // GET 요청에서 destructive 행동을 하면 (a) 페이지 한 번 열리는 순간 KPI history 영구 삭제,
+  // (b) 임시 deploy/실수로 AUTO_KPIS에서 빠지면 production 데이터 손실 위험.
+  // 응답에서 숨기는 작업은 /api/admin/analytics/kpis route GET에서 필터링으로 처리한다.
 
   await Promise.all(
     AUTO_KPIS.map((def) =>
