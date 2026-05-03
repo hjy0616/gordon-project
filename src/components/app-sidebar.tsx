@@ -16,6 +16,7 @@ import {
   Map,
   MapPin,
   MessageSquare,
+  Network,
   Moon,
   Shield,
   Sun,
@@ -241,6 +242,17 @@ export function AppSidebar({
                 >
                   <Layers />
                   <span>Lasagna</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={pathname.startsWith("/mind-map")}
+                  tooltip="Mind Map"
+                  render={<Link href="/mind-map" />}
+                >
+                  <Network />
+                  <span>Mind Map</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 

@@ -2,7 +2,7 @@
 
 import { Handle, Position, useReactFlow } from "@xyflow/react";
 import type { FlowNodeData } from "@/types/lasagna";
-import { EditableLabel } from "./editable-label";
+import { EditableLabel } from "@/components/common/editable-label";
 
 export function TransmissionNode({ id, data }: { id: string; data: FlowNodeData }) {
   const { setNodes } = useReactFlow();

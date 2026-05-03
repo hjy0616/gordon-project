@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getActionActiveUserIdsSince } from "./action-active-users";
 
-// "활동" = 12개 도메인 모델 UNION (action-active-users.ts 참고).
+// "활동" = 13개 도메인 모델 UNION (action-active-users.ts 참고).
 // admin은 KPI에서 제외 — 일반 회원 활동만 카운트.
 
 async function countActionActiveExcludingAdmin(since: Date): Promise<number> {

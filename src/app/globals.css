@@ -5,7 +5,7 @@
 
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark *, .canvas-force-dark *):not(:where(.canvas-force-light *)));
 
 @theme inline {
   --color-background: var(--background);
@@ -123,6 +123,44 @@
   --sidebar-ring: oklch(0.7 0.17 55);
   --table-border: oklch(1 0 0 / 28%);
   --table-header-bg: oklch(0.22 0 0);
+}
+
+/* 마인드맵 캔버스 전용 — 사용자가 white/black 배경을 선택하면
+ * 캔버스 영역만 light/dark 테마로 강제 (시스템 테마와 무관).
+ * 토큰을 override하면 노드/엣지/배경 패턴 등 자식 요소가 일관된 톤으로 보인다.
+ * (custom-variant dark도 이 클래스를 인식해 dark: utility를 함께 토글) */
+.canvas-force-light {
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --accent: oklch(0.96 0.02 60);
+  --accent-foreground: oklch(0.205 0 0);
+  --border: oklch(0.9 0 0);
+  --input: oklch(0.9 0 0);
+}
+
+.canvas-force-dark {
+  --background: oklch(0.1 0 0);
+  --foreground: oklch(0.93 0 0);
+  --card: oklch(0.14 0 0);
+  --card-foreground: oklch(0.93 0 0);
+  --popover: oklch(0.14 0 0);
+  --popover-foreground: oklch(0.93 0 0);
+  --secondary: oklch(0.2 0 0);
+  --secondary-foreground: oklch(0.93 0 0);
+  --muted: oklch(0.2 0 0);
+  --muted-foreground: oklch(0.6 0 0);
+  --accent: oklch(0.22 0.02 50);
+  --accent-foreground: oklch(0.93 0 0);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
 }
 
 @layer base {

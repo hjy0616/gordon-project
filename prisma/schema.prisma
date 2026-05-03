@@ -83,6 +83,7 @@ model User {
   districtOverrides  DistrictOverride[]
   preference         UserPreference?
   lasagnaSimulations LasagnaSimulation[]
+  mindMaps           MindMap[]
   posts              Post[]
   comments           Comment[]
   postLikes          PostLike[]
@@ -311,6 +312,39 @@ model LasagnaSimulation {
 
   @@index([userId])
   @@map("lasagna_simulations")
+}
+
+// ══════════════════════════════════════════════════════════
+// MIND MAP (자유형 지식 화이트보드)
+// ══════════════════════════════════════════════════════════
+
+model MindMap {
+  id                    String   @id @default(cuid())
+  userId                String   @map("user_id")
+  title                 String   @default("Untitled")
+  emoji                 String?
+  description           String?  @db.Text
+  nodes                 Json     @default("[]")
+  edges                 Json     @default("[]")
+  isPublic              Boolean  @default(false) @map("is_public")
+  isFavorite            Boolean  @default(false) @map("is_favorite")
+  viewCount             Int      @default(0) @map("view_count")
+  // 캔버스 배경: 패턴(blank/dots/grid/lined/cross) + 색상(default/cream/kraft/mint/sky/rose)
+  canvasBackground      String   @default("dots") @map("canvas_background")
+  canvasBackgroundColor String   @default("default") @map("canvas_background_color")
+  // sketchy 모드 — true면 모든 노드/엣지를 rough.js로 손그림 효과로 재그림.
+  sketchyMode           Boolean  @default(false) @map("sketchy_mode")
+  // 공개 공유 토큰: nullable, isPublic을 처음 켤 때 lazy 생성
+  shareToken            String?  @unique @map("share_token")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@index([userId, isFavorite])
+  @@index([isPublic])
+  @@map("mind_maps")
 }
 
 // ══════════════════════════════════════════════════════════

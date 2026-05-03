@@ -5,11 +5,12 @@ import { prisma } from "@/lib/prisma";
 // heartbeat(lastActiveAt)는 탭만 켜놔도 갱신되어 활동지표로 부적합.
 // User 본인 모델은 제외 — updatedAt이 시스템 update(lastActiveAt 등)로도 갱신될 수 있음.
 //
-// 12개 도메인 모델 UNION:
+// 13개 도메인 모델 UNION — d30-retention.ts와 동기화 유지:
 //   Board:        posts, comments, post_likes
 //   Lasagna:      lasagna_simulations
 //   Macro Map:    country_notes, country_edits, capital_flows, country_relations
 //   Treasure Map: custom_districts, district_notes, district_edits, district_overrides
+//   Mind Map:     mind_maps
 
 type CountRow = { count: bigint };
 
@@ -43,6 +44,8 @@ export async function countActionActiveUsersSince(since: Date): Promise<number> 
       SELECT user_id                FROM district_edits    WHERE updated_at > ${since}
       UNION
       SELECT user_id                FROM district_overrides WHERE updated_at > ${since}
+      UNION
+      SELECT user_id                FROM mind_maps         WHERE updated_at > ${since}
     )
     SELECT COUNT(DISTINCT user_id)::bigint AS count FROM action_users;
   `;
@@ -78,6 +81,8 @@ export async function getActionActiveUserIdsSince(since: Date): Promise<string[]
       SELECT user_id                FROM district_edits    WHERE updated_at > ${since}
       UNION
       SELECT user_id                FROM district_overrides WHERE updated_at > ${since}
+      UNION
+      SELECT user_id                FROM mind_maps         WHERE updated_at > ${since}
     ) t;
   `;
   return rows.map((r) => r.user_id);

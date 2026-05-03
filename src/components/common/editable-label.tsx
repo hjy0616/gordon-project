@@ -17,19 +17,29 @@ export function EditableLabel({
 }: EditableLabelProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // 편집 진입 시 포커스 + 전체 선택
   useEffect(() => {
     if (editing) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
+      textareaRef.current?.focus();
+      textareaRef.current?.select();
     }
   }, [editing]);
 
+  // 입력 길이에 따라 textarea 높이 자동 확장 — 길어져도 앞 내용이 안 잘림
+  useEffect(() => {
+    if (editing && textareaRef.current) {
+      const ta = textareaRef.current;
+      ta.style.height = "auto";
+      ta.style.height = `${ta.scrollHeight}px`;
+    }
+  }, [draft, editing]);
+
   if (readonly || !editing) {
     return (
-      <p
-        className={className}
+      <div
+        className={`whitespace-pre-wrap break-words ${className}`}
         onDoubleClick={() => {
           if (readonly) return;
           setDraft(value);
@@ -37,14 +47,15 @@ export function EditableLabel({
         }}
       >
         {value || "(더블클릭하여 편집)"}
-      </p>
+      </div>
     );
   }
 
   return (
-    <input
-      ref={inputRef}
+    <textarea
+      ref={textareaRef}
       value={draft}
+      rows={1}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => {
         setEditing(false);
@@ -53,16 +64,18 @@ export function EditableLabel({
         }
       }}
       onKeyDown={(e) => {
-        if (e.key === "Enter") {
+        // Enter = 저장, Shift+Enter = 줄바꿈 (긴 텍스트를 여러 줄로 나누고 싶을 때)
+        if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
-          (e.target as HTMLInputElement).blur();
+          (e.target as HTMLTextAreaElement).blur();
         }
         if (e.key === "Escape") {
           setDraft(value);
           setEditing(false);
         }
       }}
-      className="w-full rounded border border-primary/50 bg-transparent px-1 py-0 text-center text-sm font-bold outline-none"
+      style={{ overflow: "hidden", color: "var(--foreground)", colorScheme: "light dark" }}
+      className={`w-full resize-none rounded border border-primary/50 bg-transparent px-1 py-0 outline-none text-inherit ${className}`}
     />
   );
 }

@@ -24,9 +24,27 @@ const instrumentSerif = Instrument_Serif({
   variable: "--font-instrument-serif",
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "GORDON",
   description: "Macroeconomics Dashboard",
+  openGraph: {
+    title: "GORDON",
+    description: "Macroeconomics Dashboard",
+    url: "/",
+    siteName: "GORDON",
+    locale: "ko_KR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GORDON",
+    description: "Macroeconomics Dashboard",
+  },
 };
 
 export default function RootLayout({
