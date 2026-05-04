@@ -9,10 +9,11 @@ import {
 
 export const runtime = "nodejs";
 
-// 6개 카테고리:
+// 7개 카테고리:
 //   post / comment / like / simulation: 단일 모델
 //   macro_map:    country_notes + country_edits + capital_flows + country_relations
 //   treasure_map: custom_districts + district_notes + district_edits + district_overrides
+//   mind_map:     mind_maps (단일 모델)
 // 모두 created_at 기준 (저장한 순간).
 
 const RANGE_DAYS: Record<string, number> = {
@@ -37,6 +38,7 @@ type TopAuthorRow = {
   sims: bigint;
   macro: bigint;
   treasure: bigint;
+  mind: bigint;
   total: bigint;
 };
 
@@ -53,6 +55,7 @@ type CategoryTotalRow = {
   sims: bigint;
   macro: bigint;
   treasure: bigint;
+  mind: bigint;
 };
 
 type DistributionRow = {
@@ -69,6 +72,7 @@ type TodayRow = {
   sims_today: bigint;
   macro_today: bigint;
   treasure_today: bigint;
+  mind_today: bigint;
 };
 
 export async function GET(req: Request) {
@@ -80,7 +84,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const rangeKey = searchParams.get("range") ?? "30d";
   const days = RANGE_DAYS[rangeKey] ?? 30;
-  const cacheKey = `cache:user-activity:${rangeKey}`;
+  const cacheKey = `cache:user-activity:v2:${rangeKey}`;
 
   const data = await getCachedJson(cacheKey, 5 * 60 * 1000, async () => {
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -136,6 +140,9 @@ export async function GET(req: Request) {
           UNION ALL SELECT created_at FROM district_edits WHERE created_at >= ${since}
           UNION ALL SELECT created_at FROM district_overrides WHERE created_at >= ${since}
         ) tm GROUP BY DATE(created_at)
+        UNION ALL
+        SELECT DATE(created_at), 'mind_map'::text, COUNT(*)::bigint
+        FROM mind_maps WHERE created_at >= ${since} GROUP BY DATE(created_at)
         ORDER BY day, type;
       `,
       prisma.$queryRaw<TopAuthorRow[]>`
@@ -159,7 +166,8 @@ export async function GET(req: Request) {
               UNION ALL SELECT user_id FROM district_edits     WHERE created_at >= ${since}
               UNION ALL SELECT user_id FROM district_overrides WHERE created_at >= ${since}
             ) x GROUP BY user_id
-          )
+          ),
+          mm AS (SELECT user_id AS uid, COUNT(*)::bigint AS n FROM mind_maps WHERE created_at >= ${since} GROUP BY user_id)
         SELECT
           u.id, u.name, u.email,
           COALESCE(p.n, 0)::bigint  AS posts,
@@ -168,7 +176,8 @@ export async function GET(req: Request) {
           COALESCE(s.n, 0)::bigint  AS sims,
           COALESCE(m.n, 0)::bigint  AS macro,
           COALESCE(tm.n, 0)::bigint AS treasure,
-          (COALESCE(p.n,0)+COALESCE(c.n,0)+COALESCE(l.n,0)+COALESCE(s.n,0)+COALESCE(m.n,0)+COALESCE(tm.n,0))::bigint AS total
+          COALESCE(mm.n, 0)::bigint AS mind,
+          (COALESCE(p.n,0)+COALESCE(c.n,0)+COALESCE(l.n,0)+COALESCE(s.n,0)+COALESCE(m.n,0)+COALESCE(tm.n,0)+COALESCE(mm.n,0))::bigint AS total
         FROM users u
         LEFT JOIN p  ON p.uid  = u.id
         LEFT JOIN c  ON c.uid  = u.id
@@ -176,7 +185,8 @@ export async function GET(req: Request) {
         LEFT JOIN s  ON s.uid  = u.id
         LEFT JOIN m  ON m.uid  = u.id
         LEFT JOIN tm ON tm.uid = u.id
-        WHERE (COALESCE(p.n,0)+COALESCE(c.n,0)+COALESCE(l.n,0)+COALESCE(s.n,0)+COALESCE(m.n,0)+COALESCE(tm.n,0)) > 0
+        LEFT JOIN mm ON mm.uid = u.id
+        WHERE (COALESCE(p.n,0)+COALESCE(c.n,0)+COALESCE(l.n,0)+COALESCE(s.n,0)+COALESCE(m.n,0)+COALESCE(tm.n,0)+COALESCE(mm.n,0)) > 0
         ORDER BY total DESC
         LIMIT 10;
       `,
@@ -204,7 +214,8 @@ export async function GET(req: Request) {
             (SELECT COUNT(*) FROM district_notes    WHERE created_at >= ${since}) +
             (SELECT COUNT(*) FROM district_edits    WHERE created_at >= ${since}) +
             (SELECT COUNT(*) FROM district_overrides WHERE created_at >= ${since})
-          )::bigint AS treasure;
+          )::bigint AS treasure,
+          (SELECT COUNT(*) FROM mind_maps WHERE created_at >= ${since})::bigint AS mind;
       `,
       prisma.$queryRaw<DistributionRow[]>`
         WITH all_actions AS (
@@ -220,6 +231,7 @@ export async function GET(req: Request) {
           UNION ALL SELECT user_id   FROM district_notes    WHERE created_at >= ${since}
           UNION ALL SELECT user_id   FROM district_edits    WHERE created_at >= ${since}
           UNION ALL SELECT user_id   FROM district_overrides WHERE created_at >= ${since}
+          UNION ALL SELECT user_id   FROM mind_maps         WHERE created_at >= ${since}
         ),
         user_totals AS (
           SELECT u.id, COALESCE(a.n, 0) AS total
@@ -251,7 +263,8 @@ export async function GET(req: Request) {
             (SELECT COUNT(*) FROM district_notes    WHERE created_at >= CURRENT_DATE) +
             (SELECT COUNT(*) FROM district_edits    WHERE created_at >= CURRENT_DATE) +
             (SELECT COUNT(*) FROM district_overrides WHERE created_at >= CURRENT_DATE)
-          )::bigint AS treasure_today;
+          )::bigint AS treasure_today,
+          (SELECT COUNT(*) FROM mind_maps WHERE created_at >= CURRENT_DATE)::bigint AS mind_today;
       `,
     ]);
 
@@ -286,6 +299,7 @@ export async function GET(req: Request) {
         simulations: Number(today?.sims_today ?? 0),
         macroMap: Number(today?.macro_today ?? 0),
         treasureMap: Number(today?.treasure_today ?? 0),
+        mindMap: Number(today?.mind_today ?? 0),
       },
       categoryTotals: {
         posts: Number(cat?.posts ?? 0),
@@ -294,6 +308,7 @@ export async function GET(req: Request) {
         simulations: Number(cat?.sims ?? 0),
         macroMap: Number(cat?.macro ?? 0),
         treasureMap: Number(cat?.treasure ?? 0),
+        mindMap: Number(cat?.mind ?? 0),
       },
       timeline: timelineRows.map((r) => ({
         day: r.day.toISOString().slice(0, 10),
@@ -310,6 +325,7 @@ export async function GET(req: Request) {
         simulations: Number(r.sims),
         macroMap: Number(r.macro),
         treasureMap: Number(r.treasure),
+        mindMap: Number(r.mind),
         total: Number(r.total),
       })),
       byBoard: boardRows.map((r) => ({

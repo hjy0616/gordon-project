@@ -29,6 +29,10 @@ interface MindMapContextValue {
   sketchyMode: boolean;
   endpointDrag: EndpointDragState | null;
   setEndpointDrag: Dispatch<SetStateAction<EndpointDragState | null>>;
+  /** NodeResizer 드래그 시작 — 매 프레임 자동저장 트리거를 게이팅. */
+  beginResize: () => void;
+  /** NodeResizer 드래그 종료 — 게이팅 해제 + 보류된 동기화 1회 flush. */
+  endResize: () => void;
 }
 
 const MindMapContext = createContext<MindMapContextValue>({
@@ -36,23 +40,36 @@ const MindMapContext = createContext<MindMapContextValue>({
   sketchyMode: false,
   endpointDrag: null,
   setEndpointDrag: () => {},
+  beginResize: () => {},
+  endResize: () => {},
 });
 
 export function MindMapProvider({
   readonly,
   sketchyMode,
+  beginResize,
+  endResize,
   children,
 }: {
   readonly: boolean;
   sketchyMode: boolean;
+  beginResize: () => void;
+  endResize: () => void;
   children: ReactNode;
 }) {
   const [endpointDrag, setEndpointDrag] = useState<EndpointDragState | null>(
     null,
   );
   const value = useMemo(
-    () => ({ readonly, sketchyMode, endpointDrag, setEndpointDrag }),
-    [readonly, sketchyMode, endpointDrag],
+    () => ({
+      readonly,
+      sketchyMode,
+      endpointDrag,
+      setEndpointDrag,
+      beginResize,
+      endResize,
+    }),
+    [readonly, sketchyMode, endpointDrag, beginResize, endResize],
   );
   return (
     <MindMapContext.Provider value={value}>{children}</MindMapContext.Provider>

@@ -59,6 +59,46 @@ export const NODE_WIDTH_MAX = 600;
 export const NODE_HEIGHT_MIN = 40;
 export const NODE_HEIGHT_MAX = 400;
 
+// 도형별 기본/기준 크기. data.width/height 미지정 시 렌더 크기 + 폰트 자동 스케일의 baseline.
+// 이 값에서 라벨이 14px일 때 자연스럽게 보이도록 튜닝.
+export const SHAPE_BASELINES: Record<NodeShape, { w: number; h: number }> = {
+  rectangle: { w: 200, h: 68 },
+  rounded: { w: 200, h: 72 },
+  ellipse: { w: 180, h: 180 },
+  diamond: { w: 220, h: 220 },
+  hexagon: { w: 240, h: 152 },
+  sticky: { w: 200, h: 120 },
+};
+
+// 도형 크기 변화에 비례한 라벨/메모/이모지 폰트 메트릭. baseline 대비 min(w/W, h/H) 스케일에
+// 14/12/16px를 곱한 뒤 가독성 floor/ceil로 클램프. line-height는 폰트와 동일 비율 유지.
+export function computeNodeFontMetrics(
+  shape: NodeShape,
+  width: number,
+  height: number,
+): {
+  labelPx: number;
+  labelLineHeight: number;
+  memoPx: number;
+  memoLineHeight: number;
+  emojiPx: number;
+} {
+  const baseline = SHAPE_BASELINES[shape] ?? SHAPE_BASELINES.rectangle;
+  const scale = Math.min(width / baseline.w, height / baseline.h);
+  const clamp = (x: number, lo: number, hi: number) =>
+    Math.max(lo, Math.min(hi, x));
+  const labelPx = clamp(14 * scale, 9, 22);
+  const memoPx = clamp(12 * scale, 8, 18);
+  const emojiPx = clamp(16 * scale, 11, 26);
+  return {
+    labelPx,
+    labelLineHeight: labelPx * (24 / 14),
+    memoPx,
+    memoLineHeight: memoPx * (20 / 12),
+    emojiPx,
+  };
+}
+
 // 엣지 per-line 스타일 — UI 토글 그룹과 storage가 같은 enum 공유
 export const EDGE_PRESET_COLORS = [
   "#ef4444",

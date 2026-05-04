@@ -37,6 +37,7 @@ import {
   type MindMap,
   type MindMapFlowEdge,
   type MindMapFlowNode,
+  type MindMapNodeData,
 } from "@/types/mind-map";
 import {
   useDeleteMindMap,
@@ -206,10 +207,22 @@ function MindMapCanvas({ initial, readonly }: MindMapViewProps) {
   // onEdgesChange를 통해 여기까지 반영되므로 모든 변경 경로가 한 곳으로 모인다.
   const isFirstNodesSync = useRef(true);
   const isFirstEdgesSync = useRef(true);
+
+  // 리사이즈 드래그 중에는 매 프레임 stringify+merge를 회피한다.
+  // NodeResizer가 onResize 콜백을 60Hz로 발화 → updateNodeData → setNodes →
+  // 본 useEffect → sync.syncNodes(JSON.stringify O(N) + merge + setStatus). 50+ 노드에서
+  // 멈칫거림(씹힘) 원인. 시작 시 게이트 ON, 종료 시 OFF + 보류된 변경 1회 flush.
+  const isResizingRef = useRef(false);
+  const pendingResizeFlushRef = useRef(false);
+
   useEffect(() => {
     if (readonly) return;
     if (isFirstNodesSync.current) {
       isFirstNodesSync.current = false;
+      return;
+    }
+    if (isResizingRef.current) {
+      pendingResizeFlushRef.current = true;
       return;
     }
     sync.syncNodes(nodes);
@@ -223,14 +236,127 @@ function MindMapCanvas({ initial, readonly }: MindMapViewProps) {
     sync.syncEdges(edges);
   }, [edges, readonly, sync]);
 
-  // Tab 키로 캔버스 중앙에 새 노드 추가, Cmd/Ctrl+S로 즉시 저장
+  const beginResize = useCallback(() => {
+    isResizingRef.current = true;
+  }, []);
+  const endResize = useCallback(() => {
+    isResizingRef.current = false;
+    if (!pendingResizeFlushRef.current) return;
+    pendingResizeFlushRef.current = false;
+    const inst = rfInstance.current;
+    if (!inst) return;
+    sync.syncNodes(inst.getNodes() as MindMapFlowNode[]);
+  }, [sync]);
+
+  // 같은 클립보드 페이로드를 연속 ⌘V 시 누적 오프셋, 새 ⌘C가 들어오면 0으로 리셋.
+  const pasteOffsetRef = useRef(0);
+  const lastClipboardKeyRef = useRef<string | null>(null);
+
+  // Tab 키로 캔버스 중앙에 새 노드 추가, Cmd/Ctrl+S로 즉시 저장,
+  // Cmd/Ctrl+C/V로 선택 노드 1개 복사·붙여넣기 (시스템 클립보드 + JSON marker).
   useEffect(() => {
     if (readonly) return;
+
+    function isEditableFocus() {
+      const el = document.activeElement as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName.toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return true;
+      if (el.isContentEditable) return true;
+      return false;
+    }
+
     function onKeyDown(e: KeyboardEvent) {
       // Cmd/Ctrl+S → 수동 저장 (input/textarea 안에서도 작동해야 함)
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
         sync.flushNow();
+        return;
+      }
+
+      // Cmd/Ctrl+C → 선택 노드 1개를 시스템 클립보드에 JSON으로 복사.
+      // 텍스트 편집 중이면 브라우저 기본 텍스트 복사에 양보.
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
+        if (isEditableFocus()) return;
+        const inst = rfInstance.current;
+        if (!inst) return;
+        const selected = (inst.getNodes() as MindMapFlowNode[]).find(
+          (n) => n.selected,
+        );
+        if (!selected) return;
+        e.preventDefault();
+        const payload = {
+          _kind: "mindMapClipboard@v1" as const,
+          node: {
+            type: selected.type ?? "mindMap",
+            data: { ...selected.data },
+          },
+        };
+        const json = JSON.stringify(payload);
+        // writeText는 user gesture(keydown) 안에서 권한 프롬프트 없이 동작.
+        // 실패해도 silent — 복사 안 됨이 명백히 드러나고 다른 흐름엔 영향 없음.
+        navigator.clipboard.writeText(json).catch(() => {});
+        lastClipboardKeyRef.current = json;
+        pasteOffsetRef.current = 0;
+        return;
+      }
+
+      // Cmd/Ctrl+V → 클립보드 JSON marker 확인 후 새 노드 추가.
+      // 외부 텍스트/foreign 콘텐츠는 무시 — preventDefault 안 함.
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
+        if (isEditableFocus()) return;
+        // promise는 fire-and-forget. user gesture는 promise chain에서 유효(Chromium).
+        navigator.clipboard
+          .readText()
+          .then((text) => {
+            if (!text) return;
+            let parsed: {
+              _kind?: string;
+              node?: { type?: string; data?: MindMapNodeData };
+            };
+            try {
+              parsed = JSON.parse(text);
+            } catch {
+              return;
+            }
+            if (parsed?._kind !== "mindMapClipboard@v1") return;
+            if (
+              !parsed.node?.data ||
+              typeof parsed.node.data.label !== "string"
+            ) {
+              return;
+            }
+            const inst = rfInstance.current;
+            const container = containerRef.current;
+            if (!inst || !container) return;
+
+            // 같은 클립보드 연속 ⌘V → 오프셋 누적, 새 클립보드 → 리셋.
+            if (text !== lastClipboardKeyRef.current) {
+              lastClipboardKeyRef.current = text;
+              pasteOffsetRef.current = 0;
+            }
+            pasteOffsetRef.current += 1;
+            const off = pasteOffsetRef.current * 30;
+
+            const rect = container.getBoundingClientRect();
+            const center = inst.screenToFlowPosition({
+              x: rect.left + rect.width / 2,
+              y: rect.top + rect.height / 2,
+            });
+            const newNode: MindMapFlowNode = {
+              id: crypto.randomUUID(),
+              type: parsed.node.type ?? "mindMap",
+              position: { x: center.x + off, y: center.y + off },
+              dragHandle: NODE_DRAG_HANDLE_SELECTOR,
+              selected: true,
+              data: { ...parsed.node.data },
+            };
+            setNodes((nds) => [
+              ...nds.map((n) => ({ ...n, selected: false })),
+              newNode,
+            ]);
+          })
+          .catch(() => {});
         return;
       }
 
@@ -411,7 +537,12 @@ function MindMapCanvas({ initial, readonly }: MindMapViewProps) {
   const patternColor = patternStrokeColor(canvasBackgroundColor);
 
   return (
-    <MindMapProvider readonly={readonly} sketchyMode={sketchyMode}>
+    <MindMapProvider
+      readonly={readonly}
+      sketchyMode={sketchyMode}
+      beginResize={beginResize}
+      endResize={endResize}
+    >
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
       <header className="flex items-center gap-2 border-b border-border bg-background px-3 py-2 sm:gap-3 sm:px-4">
         <Button

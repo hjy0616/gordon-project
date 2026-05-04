@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type CSSProperties } from "react";
 
 interface EditableLabelProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
   readonly?: boolean;
+  style?: CSSProperties;
 }
 
 export function EditableLabel({
@@ -14,6 +15,7 @@ export function EditableLabel({
   onChange,
   className = "",
   readonly,
+  style,
 }: EditableLabelProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -40,6 +42,7 @@ export function EditableLabel({
     return (
       <div
         className={`whitespace-pre-wrap break-words ${className}`}
+        style={style}
         onDoubleClick={() => {
           if (readonly) return;
           setDraft(value);
@@ -74,7 +77,12 @@ export function EditableLabel({
           setEditing(false);
         }
       }}
-      style={{ overflow: "hidden", color: "var(--foreground)", colorScheme: "light dark" }}
+      style={{
+        overflow: "hidden",
+        color: "var(--foreground)",
+        colorScheme: "light dark",
+        ...style,
+      }}
       className={`w-full resize-none rounded border border-primary/50 bg-transparent px-1 py-0 outline-none text-inherit ${className}`}
     />
   );

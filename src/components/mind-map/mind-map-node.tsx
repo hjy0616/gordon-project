@@ -9,6 +9,8 @@ import {
   NODE_WIDTH_MAX,
   NODE_HEIGHT_MIN,
   NODE_HEIGHT_MAX,
+  SHAPE_BASELINES,
+  computeNodeFontMetrics,
   type MindMapFlowNode,
   type MindMapFlowEdge,
   type MindMapNodeData,
@@ -18,56 +20,36 @@ import { NodeQuickAdd } from "./node-quick-add";
 import { MindMapNodeToolbar } from "./node-toolbar";
 import { useMindMapContext } from "./mind-map-context";
 
-// 도형별 시각/공간 메타데이터.
-// `clipPath`가 있는 도형(diamond/hexagon)은 컨텐트 영역이 잘리지 않도록 패딩이 큼.
+// 도형별 시각 메타데이터. 기본 크기는 SHAPE_BASELINES(types/mind-map.ts)에서 통일 관리.
+// `clipPath`가 있는 도형(diamond/hexagon)은 컨텐트 영역이 잘리지 않도록 패딩이 큼(%).
 const SHAPE_VISUAL: Record<
   NodeShape,
-  {
-    wrapper: CSSProperties;
-    contentPad: string;
-    minW: number;
-    minH: number;
-    /** clip-path 도형은 box-shadow ring이 잘리므로 inset shadow를 쓴다. */
-    ringMode: "outset" | "inset";
-  }
+  { wrapper: CSSProperties; contentPad: string }
 > = {
   rectangle: {
     wrapper: { borderRadius: "0.5rem" },
     contentPad: "px-5 py-3.5",
-    minW: 200,
-    minH: 68,
-    ringMode: "outset",
   },
   rounded: {
     wrapper: { borderRadius: "1.25rem" },
     contentPad: "px-6 py-3.5",
-    minW: 200,
-    minH: 72,
-    ringMode: "outset",
   },
   ellipse: {
     wrapper: { borderRadius: "9999px" },
-    // 정확한 동그라미 — minW = minH. 텍스트는 사방으로 균등 padding.
-    contentPad: "px-10 py-10",
-    minW: 180,
-    minH: 180,
-    ringMode: "outset",
+    // 정확한 동그라미 — baseline w = h. 패딩은 % 기반으로 도형 크기에 비례.
+    // 원에 내접하는 정사각형은 변 ≈ 0.707×지름이므로 (1-0.707)/2 ≈ 14.6%가
+    // 안전한 텍스트 영역 경계. 12%로 약간 여유롭게 잡아 텍스트가 원에 더 가까이.
+    contentPad: "px-[12%] py-[12%]",
   },
   diamond: {
     wrapper: { clipPath: "polygon(50% 0,100% 50%,50% 100%,0 50%)" },
     contentPad: "px-[20%] py-[20%]",
-    minW: 220,
-    minH: 220,
-    ringMode: "inset",
   },
   hexagon: {
     wrapper: {
       clipPath: "polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)",
     },
     contentPad: "px-[16%] py-[14%]",
-    minW: 240,
-    minH: 152,
-    ringMode: "inset",
   },
   sticky: {
     // 회전은 의도적으로 안 줌 — floating edge boundary 계산은 un-rotated
@@ -79,9 +61,6 @@ const SHAPE_VISUAL: Record<
         "2px 4px 6px -2px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.1)",
     },
     contentPad: "px-5 py-4",
-    minW: 200,
-    minH: 120,
-    ringMode: "outset",
   },
 };
 
@@ -97,7 +76,8 @@ export function MindMapNode({
     MindMapFlowNode,
     MindMapFlowEdge
   >();
-  const { readonly, endpointDrag } = useMindMapContext();
+  const { readonly, endpointDrag, beginResize, endResize } =
+    useMindMapContext();
   const [hover, setHover] = useState(false);
 
   // Defense-in-depth: 잘못된 enum이 들어오면 fallback으로 그려서 페이지가 깨지지 않도록.
@@ -123,9 +103,12 @@ export function MindMapNode({
     updateNodeData(id, { width: params.width, height: params.height });
   }
 
-  // 사용자가 리사이즈한 값이 있으면 우선, 없으면 도형 default.
-  const w = data.width ?? visual.minW;
-  const h = data.height ?? visual.minH;
+  // 사용자가 리사이즈한 값이 있으면 우선, 없으면 도형 default(baseline).
+  const baseline = SHAPE_BASELINES[shape];
+  const w = data.width ?? baseline.w;
+  const h = data.height ?? baseline.h;
+  // 도형 크기 변화에 따른 폰트 자동 스케일 — 라벨/메모/이모지 모두 비례 축소·확대.
+  const fontMetrics = computeNodeFontMetrics(shape, w, h);
 
   // sticky는 자체 노란 배경. 다른 도형은 NODE_COLOR_CLASSES.bg 사용.
   const bgClass = shape === "sticky" ? STICKY_BG : colorClasses.bg;
@@ -176,7 +159,9 @@ export function MindMapNode({
         maxWidth={NODE_WIDTH_MAX}
         maxHeight={NODE_HEIGHT_MAX}
         isVisible={!readonly && selected}
+        onResizeStart={beginResize}
         onResize={handleResize}
+        onResizeEnd={endResize}
         lineClassName="!border-primary/50"
         handleClassName="!bg-primary !border-white !rounded-sm"
       />
@@ -200,7 +185,13 @@ export function MindMapNode({
         >
           <div className="flex items-start gap-2">
             {data.emoji ? (
-              <span className="shrink-0 select-none text-base leading-6">
+              <span
+                className="shrink-0 select-none"
+                style={{
+                  fontSize: `${fontMetrics.emojiPx}px`,
+                  lineHeight: `${fontMetrics.labelLineHeight}px`,
+                }}
+              >
                 {data.emoji}
               </span>
             ) : null}
@@ -208,7 +199,11 @@ export function MindMapNode({
               value={data.label}
               onChange={handleLabelChange}
               readonly={readonly}
-              className="flex-1 break-words text-left text-sm font-medium leading-6 text-foreground"
+              className="flex-1 break-words text-left font-medium text-foreground"
+              style={{
+                fontSize: `${fontMetrics.labelPx}px`,
+                lineHeight: `${fontMetrics.labelLineHeight}px`,
+              }}
             />
           </div>
           {data.memo !== undefined ? (
@@ -217,6 +212,8 @@ export function MindMapNode({
                 value={data.memo}
                 onChange={handleMemoChange}
                 readonly={readonly}
+                fontSizePx={fontMetrics.memoPx}
+                lineHeightPx={fontMetrics.memoLineHeight}
               />
             </div>
           ) : null}
@@ -238,10 +235,14 @@ function MemoEditor({
   value,
   onChange,
   readonly,
+  fontSizePx,
+  lineHeightPx,
 }: {
   value: string;
   onChange: (v: string) => void;
   readonly: boolean;
+  fontSizePx: number;
+  lineHeightPx: number;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -249,7 +250,11 @@ function MemoEditor({
   if (readonly || !editing) {
     return (
       <p
-        className="whitespace-pre-wrap text-xs leading-5 text-muted-foreground"
+        className="whitespace-pre-wrap text-muted-foreground"
+        style={{
+          fontSize: `${fontSizePx}px`,
+          lineHeight: `${lineHeightPx}px`,
+        }}
         onDoubleClick={() => {
           if (readonly) return;
           setDraft(value);
@@ -279,8 +284,13 @@ function MemoEditor({
       }}
       // color-scheme: textarea는 시스템 dark mode 영향으로 글자색이 흰색이 될 수 있음.
       // canvas-force-light/dark 안에서 --foreground 토큰을 직접 박아 강제.
-      style={{ color: "var(--muted-foreground)", colorScheme: "light dark" }}
-      className="w-full resize-none rounded border border-primary/50 bg-transparent p-1 text-xs leading-5 outline-none"
+      style={{
+        color: "var(--muted-foreground)",
+        colorScheme: "light dark",
+        fontSize: `${fontSizePx}px`,
+        lineHeight: `${lineHeightPx}px`,
+      }}
+      className="w-full resize-none rounded border border-primary/50 bg-transparent p-1 outline-none"
     />
   );
 }

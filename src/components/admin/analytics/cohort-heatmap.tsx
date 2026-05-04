@@ -13,8 +13,20 @@ type CohortsData = {
     size: number;
     retention: { d1: number; d7: number; d30: number };
     retainedCount: { d1: number; d7: number; d30: number };
-    activation: { firstPost7d: number; firstLasagna7d: number };
-    activationCount: { firstPost7d: number; firstLasagna7d: number };
+    activation: {
+      firstPost7d: number;
+      firstLasagna7d: number;
+      firstMind7d: number;
+      firstMacro7d: number;
+      firstTreasure7d: number;
+    };
+    activationCount: {
+      firstPost7d: number;
+      firstLasagna7d: number;
+      firstMind7d: number;
+      firstMacro7d: number;
+      firstTreasure7d: number;
+    };
   }>;
 };
 
@@ -39,7 +51,7 @@ export function CohortSection() {
         <div>
           <CardTitle className="text-base">코호트 리텐션</CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
-            가입 시점 기준 D1 / D7 / D30 잔존율
+            가입 시점 기준 D1 / D7 / D30 잔존율 (13개 도메인 모델 액션 기반)
           </p>
         </div>
         <div className="flex gap-1">
@@ -64,7 +76,7 @@ export function CohortSection() {
           <Skeleton className="h-[300px] w-full" />
         ) : data?.cohorts.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            데이터가 충분하지 않습니다 — 가입 후 lastActiveAt이 누적되면 표시됩니다.
+            데이터가 충분하지 않습니다 — 코호트가 13개 모델 중 어디든 액션을 기록하면 표시됩니다.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -78,6 +90,9 @@ export function CohortSection() {
                   <th className="px-2 py-2 text-right">D30</th>
                   <th className="px-2 py-2 text-right">첫 글(7일)</th>
                   <th className="px-2 py-2 text-right">첫 시뮬(7일)</th>
+                  <th className="px-2 py-2 text-right">첫 마인드(7일)</th>
+                  <th className="px-2 py-2 text-right">첫 Macro(7일)</th>
+                  <th className="px-2 py-2 text-right">첫 Treasure(7일)</th>
                 </tr>
               </thead>
               <tbody>
@@ -104,6 +119,24 @@ export function CohortSection() {
                       <ActivationCell
                         rate={c.activation.firstLasagna7d}
                         count={c.activationCount.firstLasagna7d}
+                      />
+                    </td>
+                    <td className="px-2 py-2 text-right">
+                      <ActivationCell
+                        rate={c.activation.firstMind7d}
+                        count={c.activationCount.firstMind7d}
+                      />
+                    </td>
+                    <td className="px-2 py-2 text-right">
+                      <ActivationCell
+                        rate={c.activation.firstMacro7d}
+                        count={c.activationCount.firstMacro7d}
+                      />
+                    </td>
+                    <td className="px-2 py-2 text-right">
+                      <ActivationCell
+                        rate={c.activation.firstTreasure7d}
+                        count={c.activationCount.firstTreasure7d}
                       />
                     </td>
                   </tr>

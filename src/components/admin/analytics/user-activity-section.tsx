@@ -19,6 +19,7 @@ import {
   Heart,
   Map as MapIcon,
   MessageSquare,
+  Network,
   Sparkles,
   TreePine,
   TrendingUp,
@@ -36,6 +37,7 @@ type CategoryCounts = {
   simulations: number;
   macroMap: number;
   treasureMap: number;
+  mindMap: number;
 };
 
 type UserActivityData = {
@@ -57,6 +59,7 @@ type UserActivityData = {
     simulations: number;
     macroMap: number;
     treasureMap: number;
+    mindMap: number;
     total: number;
   }>;
   byBoard: Array<{ slug: string; name: string; posts: number }>;
@@ -70,6 +73,7 @@ const EMPTY_CATEGORY: CategoryCounts = {
   simulations: 0,
   macroMap: 0,
   treasureMap: 0,
+  mindMap: 0,
 };
 
 async function fetchUserActivity(range: string): Promise<UserActivityData> {
@@ -105,6 +109,7 @@ const TYPE_META: Record<string, { label: string; color: string }> = {
   simulation: { label: "시뮬", color: "var(--color-emerald-500, #10b981)" },
   macro_map: { label: "Macro Map", color: "var(--color-violet-500, #8b5cf6)" },
   treasure_map: { label: "Treasure Map", color: "var(--color-amber-500, #f59e0b)" },
+  mind_map: { label: "Mind Map", color: "var(--color-rose-500, #f43f5e)" },
 };
 
 export function UserActivitySection() {
@@ -156,6 +161,7 @@ export function UserActivitySection() {
       { label: "시뮬", value: data.categoryTotals.simulations, color: "var(--color-emerald-500, #10b981)" },
       { label: "Macro Map", value: data.categoryTotals.macroMap, color: "var(--color-violet-500, #8b5cf6)" },
       { label: "Treasure Map", value: data.categoryTotals.treasureMap, color: "var(--color-amber-500, #f59e0b)" },
+      { label: "Mind Map", value: data.categoryTotals.mindMap, color: "var(--color-rose-500, #f43f5e)" },
     ];
   }, [data]);
 
@@ -179,7 +185,7 @@ export function UserActivitySection() {
         ))}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
         <StatCard
           title="오늘 글"
           value={data?.today.posts}
@@ -220,6 +226,13 @@ export function UserActivitySection() {
           value={data?.today.treasureMap}
           icon={TreePine}
           accent="text-amber-500"
+          loading={isLoading}
+        />
+        <StatCard
+          title="오늘 Mind Map"
+          value={data?.today.mindMap}
+          icon={Network}
+          accent="text-rose-500"
           loading={isLoading}
         />
       </div>
@@ -267,7 +280,7 @@ export function UserActivitySection() {
         <CardHeader>
           <CardTitle className="text-base">일별 활동 timeline</CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
-            글 / 댓글 / 좋아요 / 시뮬 / Macro Map / Treasure Map 일별 카운트 (저장 순간 기준)
+            글 / 댓글 / 좋아요 / 시뮬 / Macro Map / Treasure Map / Mind Map 일별 카운트 (저장 순간 기준)
           </p>
         </CardHeader>
         <CardContent>
@@ -377,7 +390,7 @@ export function UserActivitySection() {
           <CardHeader>
             <CardTitle className="text-base">활동량 Top 10 유저</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
-              글 + 댓글 + 좋아요 + 시뮬 + Map + Treasure Map 합산
+              글 + 댓글 + 좋아요 + 시뮬 + Map + Treasure Map + Mind Map 합산
             </p>
           </CardHeader>
           <CardContent>
@@ -395,6 +408,7 @@ export function UserActivitySection() {
                       <th className="px-2 py-1 text-right">시뮬</th>
                       <th className="px-2 py-1 text-right">Map</th>
                       <th className="px-2 py-1 text-right">Treasure</th>
+                      <th className="px-2 py-1 text-right">Mind</th>
                       <th className="px-2 py-1 text-right">합계</th>
                     </tr>
                   </thead>
@@ -425,6 +439,9 @@ export function UserActivitySection() {
                         <td className="px-2 py-1.5 text-right tabular-nums">
                           {u.treasureMap}
                         </td>
+                        <td className="px-2 py-1.5 text-right tabular-nums">
+                          {u.mindMap}
+                        </td>
                         <td className="px-2 py-1.5 text-right font-semibold tabular-nums">
                           {u.total}
                         </td>
@@ -445,7 +462,7 @@ export function UserActivitySection() {
           <CardHeader>
             <CardTitle className="text-base">유저별 활동량 분포</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
-              Heavy(20+) · Medium(5-19) · Light(1-4) · 비활동(0) — 6개 카테고리 합산
+              Heavy(20+) · Medium(5-19) · Light(1-4) · 비활동(0) — 7개 카테고리 합산
             </p>
           </CardHeader>
           <CardContent>
