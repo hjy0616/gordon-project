@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function MapLoading() {
   return (
-    <div className="relative -m-6 h-[calc(100svh-3rem)] w-[calc(100%+3rem)] bg-background">
+    <div className="relative -m-6 h-[100svh] w-[calc(100%+3rem)] bg-background">
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Skeleton className="h-12 w-12 rounded-full" />

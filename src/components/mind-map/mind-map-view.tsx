@@ -274,95 +274,8 @@ function MindMapCanvas({ initial, readonly }: MindMapViewProps) {
         return;
       }
 
-      // Cmd/Ctrl+C → 선택 노드 1개를 시스템 클립보드에 JSON으로 복사.
-      // 텍스트 편집 중이면 브라우저 기본 텍스트 복사에 양보.
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
-        if (isEditableFocus()) return;
-        const inst = rfInstance.current;
-        if (!inst) return;
-        const selected = (inst.getNodes() as MindMapFlowNode[]).find(
-          (n) => n.selected,
-        );
-        if (!selected) return;
-        e.preventDefault();
-        const payload = {
-          _kind: "mindMapClipboard@v1" as const,
-          node: {
-            type: selected.type ?? "mindMap",
-            data: { ...selected.data },
-          },
-        };
-        const json = JSON.stringify(payload);
-        // writeText는 user gesture(keydown) 안에서 권한 프롬프트 없이 동작.
-        // 실패해도 silent — 복사 안 됨이 명백히 드러나고 다른 흐름엔 영향 없음.
-        navigator.clipboard.writeText(json).catch(() => {});
-        lastClipboardKeyRef.current = json;
-        pasteOffsetRef.current = 0;
-        return;
-      }
-
-      // Cmd/Ctrl+V → 클립보드 JSON marker 확인 후 새 노드 추가.
-      // 외부 텍스트/foreign 콘텐츠는 무시 — preventDefault 안 함.
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
-        if (isEditableFocus()) return;
-        // promise는 fire-and-forget. user gesture는 promise chain에서 유효(Chromium).
-        navigator.clipboard
-          .readText()
-          .then((text) => {
-            if (!text) return;
-            let parsed: {
-              _kind?: string;
-              node?: { type?: string; data?: MindMapNodeData };
-            };
-            try {
-              parsed = JSON.parse(text);
-            } catch {
-              return;
-            }
-            if (parsed?._kind !== "mindMapClipboard@v1") return;
-            if (
-              !parsed.node?.data ||
-              typeof parsed.node.data.label !== "string"
-            ) {
-              return;
-            }
-            const inst = rfInstance.current;
-            const container = containerRef.current;
-            if (!inst || !container) return;
-
-            // 같은 클립보드 연속 ⌘V → 오프셋 누적, 새 클립보드 → 리셋.
-            if (text !== lastClipboardKeyRef.current) {
-              lastClipboardKeyRef.current = text;
-              pasteOffsetRef.current = 0;
-            }
-            pasteOffsetRef.current += 1;
-            const off = pasteOffsetRef.current * 30;
-
-            const rect = container.getBoundingClientRect();
-            const center = inst.screenToFlowPosition({
-              x: rect.left + rect.width / 2,
-              y: rect.top + rect.height / 2,
-            });
-            const newNode: MindMapFlowNode = {
-              id: crypto.randomUUID(),
-              type: parsed.node.type ?? "mindMap",
-              position: { x: center.x + off, y: center.y + off },
-              dragHandle: NODE_DRAG_HANDLE_SELECTOR,
-              selected: true,
-              data: { ...parsed.node.data },
-            };
-            setNodes((nds) => [
-              ...nds.map((n) => ({ ...n, selected: false })),
-              newNode,
-            ]);
-          })
-          .catch(() => {});
-        return;
-      }
-
       if (e.key !== "Tab") return;
-      const tag = (document.activeElement?.tagName ?? "").toLowerCase();
-      if (["input", "textarea", "select"].includes(tag)) return;
+      if (isEditableFocus()) return;
       const inst = rfInstance.current;
       const container = containerRef.current;
       if (!inst || !container) return;
@@ -385,8 +298,93 @@ function MindMapCanvas({ initial, readonly }: MindMapViewProps) {
         newNode,
       ]);
     }
+
+    // Cmd/Ctrl+C/V는 ClipboardEvent로 처리 — clipboardData.setData/getData는
+    // user gesture(copy/paste 이벤트 자체)로 자동 권한 부여되어 권한 프롬프트가
+    // 뜨지 않는다. navigator.clipboard.readText()는 별도 권한 정책이 적용돼 일부
+    // 브라우저에서 "Allow ... access your clipboard?" 프롬프트가 뜬다.
+    function onCopy(e: ClipboardEvent) {
+      if (isEditableFocus()) return;
+      const inst = rfInstance.current;
+      if (!inst) return;
+      const selected = (inst.getNodes() as MindMapFlowNode[]).find(
+        (n) => n.selected,
+      );
+      if (!selected) return;
+      const payload = {
+        _kind: "mindMapClipboard@v1" as const,
+        node: {
+          type: selected.type ?? "mindMap",
+          data: { ...selected.data },
+        },
+      };
+      const json = JSON.stringify(payload);
+      e.clipboardData?.setData("text/plain", json);
+      e.preventDefault();
+      lastClipboardKeyRef.current = json;
+      pasteOffsetRef.current = 0;
+    }
+
+    function onPaste(e: ClipboardEvent) {
+      if (isEditableFocus()) return;
+      const text = e.clipboardData?.getData("text/plain") ?? "";
+      if (!text) return;
+      let parsed: {
+        _kind?: string;
+        node?: { type?: string; data?: MindMapNodeData };
+      };
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        return;
+      }
+      if (parsed?._kind !== "mindMapClipboard@v1") return;
+      if (
+        !parsed.node?.data ||
+        typeof parsed.node.data.label !== "string"
+      ) {
+        return;
+      }
+      const inst = rfInstance.current;
+      const container = containerRef.current;
+      if (!inst || !container) return;
+      e.preventDefault();
+
+      // 같은 클립보드 연속 ⌘V → 오프셋 누적, 새 클립보드 → 리셋.
+      if (text !== lastClipboardKeyRef.current) {
+        lastClipboardKeyRef.current = text;
+        pasteOffsetRef.current = 0;
+      }
+      pasteOffsetRef.current += 1;
+      const off = pasteOffsetRef.current * 30;
+
+      const rect = container.getBoundingClientRect();
+      const center = inst.screenToFlowPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      });
+      const newNode: MindMapFlowNode = {
+        id: crypto.randomUUID(),
+        type: parsed.node.type ?? "mindMap",
+        position: { x: center.x + off, y: center.y + off },
+        dragHandle: NODE_DRAG_HANDLE_SELECTOR,
+        selected: true,
+        data: { ...parsed.node.data },
+      };
+      setNodes((nds) => [
+        ...nds.map((n) => ({ ...n, selected: false })),
+        newNode,
+      ]);
+    }
+
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("copy", onCopy);
+    document.addEventListener("paste", onPaste);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("copy", onCopy);
+      document.removeEventListener("paste", onPaste);
+    };
   }, [readonly, setNodes, sync]);
 
   // 드래그 종료 — valid면 두 노드 사이 엣지(양쪽 anchor 포함), invalid면 새 자식 노드 + 엣지(anchor 없음).
@@ -543,8 +541,8 @@ function MindMapCanvas({ initial, readonly }: MindMapViewProps) {
       beginResize={beginResize}
       endResize={endResize}
     >
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
-      <header className="flex items-center gap-2 border-b border-border bg-background px-3 py-2 sm:gap-3 sm:px-4">
+    <div className="-m-6 flex h-screen flex-col">
+      <header className="flex items-center gap-2 border-b border-border bg-background py-2 pl-12 pr-3 sm:gap-3 sm:pl-14 sm:pr-4">
         <Button
           variant="ghost"
           size="sm"

@@ -44,7 +44,7 @@ export default function LasagnaView() {
 
   if (isMobile) {
     return (
-      <div className="-m-6 flex h-[calc(100svh-3rem)] w-[calc(100%+3rem)] overflow-hidden">
+      <div className="-m-6 flex h-[100svh] w-[calc(100%+3rem)] overflow-hidden">
         <Button
           variant="outline"
           size="icon"

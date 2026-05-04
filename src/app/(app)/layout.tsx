@@ -32,9 +32,9 @@ export default async function AppLayout({
           avatarUrl={avatarUrl}
         />
         <SidebarInset>
-          <header className="flex h-12 items-center gap-2 px-4">
-            <SidebarTrigger />
-          </header>
+          <SidebarTrigger
+            className="absolute left-2 top-3 z-30 size-7 rounded-md border border-border bg-background shadow-sm sm:left-0 sm:-translate-x-1/2"
+          />
           <div className="flex-1 overflow-hidden p-6">
             {children}
           </div>

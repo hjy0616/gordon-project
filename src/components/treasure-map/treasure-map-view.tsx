@@ -45,7 +45,7 @@ export function TreasureMapView() {
     isMobile && panelMode === "create" && createStep === "locate";
 
   return (
-    <div className="relative -m-6 flex h-[calc(100svh-3rem)] w-[calc(100%+3rem)] overflow-hidden">
+    <div className="relative -m-6 flex h-[100svh] w-[calc(100%+3rem)] overflow-hidden">
       {/* Map */}
       <div className={isMobile ? "relative w-full" : "relative w-[65%]"}>
         <MapContainer />

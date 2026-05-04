@@ -42,7 +42,7 @@ export function MacroMapView() {
   }, [editMode]);
 
   return (
-    <div className="relative -m-6 flex h-[calc(100svh-3rem)] w-[calc(100%+3rem)] flex-col overflow-hidden">
+    <div className="relative -m-6 flex h-[100svh] w-[calc(100%+3rem)] flex-col overflow-hidden">
       <div className="relative flex-1 overflow-hidden">
         <MapContainer />
 

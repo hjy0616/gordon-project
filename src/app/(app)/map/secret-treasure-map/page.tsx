@@ -9,7 +9,7 @@ const TreasureMapView = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[calc(100svh-3rem)] w-full items-center justify-center">
+      <div className="flex h-[100svh] w-full items-center justify-center">
         <Skeleton className="h-full w-full" />
       </div>
     ),
