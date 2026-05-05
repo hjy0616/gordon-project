@@ -17,8 +17,15 @@ type CountRow = { count: bigint };
 /**
  * since 이후 `의미 있는 액션`(=row 생성/수정)을 한 distinct user 수.
  * createdAt 또는 updatedAt 중 하나라도 since 이후면 카운트 (post_likes는 createdAt만 존재).
+ *
+ * options.excludeAdmin (default false): true면 role='ADMIN' 유저 제외.
+ *   삭제된 유저(LEFT JOIN NULL)는 'USER'로 간주하여 통과 — 분석 데이터 보존.
  */
-export async function countActionActiveUsersSince(since: Date): Promise<number> {
+export async function countActionActiveUsersSince(
+  since: Date,
+  options?: { excludeAdmin?: boolean },
+): Promise<number> {
+  const excludeAdmin = options?.excludeAdmin ?? false;
   const rows = await prisma.$queryRaw<CountRow[]>`
     WITH action_users AS (
       SELECT author_id    AS user_id FROM posts             WHERE updated_at > ${since}
@@ -47,17 +54,29 @@ export async function countActionActiveUsersSince(since: Date): Promise<number> 
       UNION
       SELECT user_id                FROM mind_maps         WHERE updated_at > ${since}
     )
-    SELECT COUNT(DISTINCT user_id)::bigint AS count FROM action_users;
+    SELECT COUNT(DISTINCT au.user_id)::bigint AS count
+    FROM action_users au
+    LEFT JOIN users u ON u.id = au.user_id
+    WHERE NOT ${excludeAdmin}::boolean
+       OR COALESCE(u.role::text, 'USER') <> 'ADMIN';
   `;
   return Number(rows[0]?.count ?? 0);
 }
 
 /**
  * since 이후 액션한 distinct userId 집합. WAU/MAU 분모, 신규 분리 등에 사용.
+ *
+ * options.excludeAdmin (default false): true면 role='ADMIN' 유저 제외.
+ *   삭제된 유저(LEFT JOIN NULL)는 'USER'로 간주하여 통과 — 분석 데이터 보존.
  */
-export async function getActionActiveUserIdsSince(since: Date): Promise<string[]> {
+export async function getActionActiveUserIdsSince(
+  since: Date,
+  options?: { excludeAdmin?: boolean },
+): Promise<string[]> {
+  const excludeAdmin = options?.excludeAdmin ?? false;
   const rows = await prisma.$queryRaw<{ user_id: string }[]>`
-    SELECT DISTINCT user_id FROM (
+    SELECT DISTINCT au.user_id
+    FROM (
       SELECT author_id    AS user_id FROM posts             WHERE updated_at > ${since}
       UNION
       SELECT author_id              FROM comments          WHERE updated_at > ${since}
@@ -83,7 +102,10 @@ export async function getActionActiveUserIdsSince(since: Date): Promise<string[]
       SELECT user_id                FROM district_overrides WHERE updated_at > ${since}
       UNION
       SELECT user_id                FROM mind_maps         WHERE updated_at > ${since}
-    ) t;
+    ) au
+    LEFT JOIN users u ON u.id = au.user_id
+    WHERE NOT ${excludeAdmin}::boolean
+       OR COALESCE(u.role::text, 'USER') <> 'ADMIN';
   `;
   return rows.map((r) => r.user_id);
 }

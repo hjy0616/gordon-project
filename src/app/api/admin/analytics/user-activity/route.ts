@@ -84,7 +84,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const rangeKey = searchParams.get("range") ?? "30d";
   const days = RANGE_DAYS[rangeKey] ?? 30;
-  const cacheKey = `cache:user-activity:v2:${rangeKey}`;
+  const cacheKey = `cache:user-activity:v4:${rangeKey}`;
 
   const data = await getCachedJson(cacheKey, 5 * 60 * 1000, async () => {
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -107,42 +107,43 @@ export async function GET(req: Request) {
       todayRows,
     ] = await Promise.all([
       // DAU 유저 ID 리스트 (신규/재방문 분리에 사용)
-      getActionActiveUserIdsSince(day1),
-      countActionActiveUsersSince(day7),
-      countActionActiveUsersSince(day30),
+      getActionActiveUserIdsSince(day1, { excludeAdmin: true }),
+      countActionActiveUsersSince(day7, { excludeAdmin: true }),
+      countActionActiveUsersSince(day30, { excludeAdmin: true }),
       // Active Contributor (range 내 활동) — 12개 모델 헬퍼 사용
-      countActionActiveUsersSince(since),
+      countActionActiveUsersSince(since, { excludeAdmin: true }),
       prisma.$queryRaw<TimelineRow[]>`
+        WITH admin_ids AS (SELECT id FROM users WHERE role = 'ADMIN')
         SELECT DATE(created_at) AS day, 'post'::text AS type, COUNT(*)::bigint AS count
-        FROM posts WHERE created_at >= ${since} GROUP BY DATE(created_at)
+        FROM posts WHERE created_at >= ${since} AND author_id NOT IN (SELECT id FROM admin_ids) GROUP BY DATE(created_at)
         UNION ALL
         SELECT DATE(created_at), 'comment'::text, COUNT(*)::bigint
-        FROM comments WHERE created_at >= ${since} GROUP BY DATE(created_at)
+        FROM comments WHERE created_at >= ${since} AND author_id NOT IN (SELECT id FROM admin_ids) GROUP BY DATE(created_at)
         UNION ALL
         SELECT DATE(created_at), 'like'::text, COUNT(*)::bigint
-        FROM post_likes WHERE created_at >= ${since} GROUP BY DATE(created_at)
+        FROM post_likes WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids) GROUP BY DATE(created_at)
         UNION ALL
         SELECT DATE(created_at), 'simulation'::text, COUNT(*)::bigint
-        FROM lasagna_simulations WHERE created_at >= ${since} GROUP BY DATE(created_at)
+        FROM lasagna_simulations WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids) GROUP BY DATE(created_at)
         UNION ALL
         SELECT DATE(created_at) AS day, 'macro_map'::text AS type, COUNT(*)::bigint
         FROM (
-          SELECT created_at FROM country_notes WHERE created_at >= ${since}
-          UNION ALL SELECT created_at FROM country_edits WHERE created_at >= ${since}
-          UNION ALL SELECT created_at FROM capital_flows WHERE created_at >= ${since}
-          UNION ALL SELECT created_at FROM country_relations WHERE created_at >= ${since}
+          SELECT created_at FROM country_notes     WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)
+          UNION ALL SELECT created_at FROM country_edits     WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)
+          UNION ALL SELECT created_at FROM capital_flows     WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)
+          UNION ALL SELECT created_at FROM country_relations WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)
         ) m GROUP BY DATE(created_at)
         UNION ALL
         SELECT DATE(created_at) AS day, 'treasure_map'::text AS type, COUNT(*)::bigint
         FROM (
-          SELECT created_at FROM custom_districts WHERE created_at >= ${since}
-          UNION ALL SELECT created_at FROM district_notes WHERE created_at >= ${since}
-          UNION ALL SELECT created_at FROM district_edits WHERE created_at >= ${since}
-          UNION ALL SELECT created_at FROM district_overrides WHERE created_at >= ${since}
+          SELECT created_at FROM custom_districts  WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)
+          UNION ALL SELECT created_at FROM district_notes    WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)
+          UNION ALL SELECT created_at FROM district_edits    WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)
+          UNION ALL SELECT created_at FROM district_overrides WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)
         ) tm GROUP BY DATE(created_at)
         UNION ALL
         SELECT DATE(created_at), 'mind_map'::text, COUNT(*)::bigint
-        FROM mind_maps WHERE created_at >= ${since} GROUP BY DATE(created_at)
+        FROM mind_maps WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids) GROUP BY DATE(created_at)
         ORDER BY day, type;
       `,
       prisma.$queryRaw<TopAuthorRow[]>`
@@ -187,35 +188,41 @@ export async function GET(req: Request) {
         LEFT JOIN tm ON tm.uid = u.id
         LEFT JOIN mm ON mm.uid = u.id
         WHERE (COALESCE(p.n,0)+COALESCE(c.n,0)+COALESCE(l.n,0)+COALESCE(s.n,0)+COALESCE(m.n,0)+COALESCE(tm.n,0)+COALESCE(mm.n,0)) > 0
+          AND u.role <> 'ADMIN'
         ORDER BY total DESC
         LIMIT 10;
       `,
       prisma.$queryRaw<BoardActivityRow[]>`
+        WITH admin_ids AS (SELECT id FROM users WHERE role = 'ADMIN')
         SELECT b.slug, b.name, COUNT(p.id)::bigint AS posts
         FROM boards b
-        LEFT JOIN posts p ON p.board_id = b.id AND p.created_at >= ${since}
+        LEFT JOIN posts p
+          ON p.board_id = b.id
+         AND p.created_at >= ${since}
+         AND p.author_id NOT IN (SELECT id FROM admin_ids)
         GROUP BY b.id, b.slug, b.name
         ORDER BY posts DESC, b.sort_order ASC;
       `,
       prisma.$queryRaw<CategoryTotalRow[]>`
+        WITH admin_ids AS (SELECT id FROM users WHERE role = 'ADMIN')
         SELECT
-          (SELECT COUNT(*) FROM posts            WHERE created_at >= ${since})::bigint AS posts,
-          (SELECT COUNT(*) FROM comments         WHERE created_at >= ${since})::bigint AS comments,
-          (SELECT COUNT(*) FROM post_likes       WHERE created_at >= ${since})::bigint AS likes,
-          (SELECT COUNT(*) FROM lasagna_simulations WHERE created_at >= ${since})::bigint AS sims,
+          (SELECT COUNT(*) FROM posts            WHERE created_at >= ${since} AND author_id NOT IN (SELECT id FROM admin_ids))::bigint AS posts,
+          (SELECT COUNT(*) FROM comments         WHERE created_at >= ${since} AND author_id NOT IN (SELECT id FROM admin_ids))::bigint AS comments,
+          (SELECT COUNT(*) FROM post_likes       WHERE created_at >= ${since} AND user_id   NOT IN (SELECT id FROM admin_ids))::bigint AS likes,
+          (SELECT COUNT(*) FROM lasagna_simulations WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids))::bigint AS sims,
           (
-            (SELECT COUNT(*) FROM country_notes     WHERE created_at >= ${since}) +
-            (SELECT COUNT(*) FROM country_edits     WHERE created_at >= ${since}) +
-            (SELECT COUNT(*) FROM capital_flows     WHERE created_at >= ${since}) +
-            (SELECT COUNT(*) FROM country_relations WHERE created_at >= ${since})
+            (SELECT COUNT(*) FROM country_notes     WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)) +
+            (SELECT COUNT(*) FROM country_edits     WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)) +
+            (SELECT COUNT(*) FROM capital_flows     WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)) +
+            (SELECT COUNT(*) FROM country_relations WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids))
           )::bigint AS macro,
           (
-            (SELECT COUNT(*) FROM custom_districts  WHERE created_at >= ${since}) +
-            (SELECT COUNT(*) FROM district_notes    WHERE created_at >= ${since}) +
-            (SELECT COUNT(*) FROM district_edits    WHERE created_at >= ${since}) +
-            (SELECT COUNT(*) FROM district_overrides WHERE created_at >= ${since})
+            (SELECT COUNT(*) FROM custom_districts  WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)) +
+            (SELECT COUNT(*) FROM district_notes    WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)) +
+            (SELECT COUNT(*) FROM district_edits    WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids)) +
+            (SELECT COUNT(*) FROM district_overrides WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids))
           )::bigint AS treasure,
-          (SELECT COUNT(*) FROM mind_maps WHERE created_at >= ${since})::bigint AS mind;
+          (SELECT COUNT(*) FROM mind_maps WHERE created_at >= ${since} AND user_id NOT IN (SELECT id FROM admin_ids))::bigint AS mind;
       `,
       prisma.$queryRaw<DistributionRow[]>`
         WITH all_actions AS (
@@ -238,6 +245,7 @@ export async function GET(req: Request) {
           FROM users u
           LEFT JOIN (SELECT uid, COUNT(*)::int AS n FROM all_actions GROUP BY uid) a
             ON a.uid = u.id
+          WHERE u.role <> 'ADMIN'
         )
         SELECT
           COUNT(*) FILTER (WHERE total = 0)::bigint               AS inactive,
@@ -247,24 +255,25 @@ export async function GET(req: Request) {
         FROM user_totals;
       `,
       prisma.$queryRaw<TodayRow[]>`
+        WITH admin_ids AS (SELECT id FROM users WHERE role = 'ADMIN')
         SELECT
-          (SELECT COUNT(*) FROM posts            WHERE created_at >= CURRENT_DATE)::bigint AS posts_today,
-          (SELECT COUNT(*) FROM comments         WHERE created_at >= CURRENT_DATE)::bigint AS comments_today,
-          (SELECT COUNT(*) FROM post_likes       WHERE created_at >= CURRENT_DATE)::bigint AS likes_today,
-          (SELECT COUNT(*) FROM lasagna_simulations WHERE created_at >= CURRENT_DATE)::bigint AS sims_today,
+          (SELECT COUNT(*) FROM posts            WHERE created_at >= CURRENT_DATE AND author_id NOT IN (SELECT id FROM admin_ids))::bigint AS posts_today,
+          (SELECT COUNT(*) FROM comments         WHERE created_at >= CURRENT_DATE AND author_id NOT IN (SELECT id FROM admin_ids))::bigint AS comments_today,
+          (SELECT COUNT(*) FROM post_likes       WHERE created_at >= CURRENT_DATE AND user_id   NOT IN (SELECT id FROM admin_ids))::bigint AS likes_today,
+          (SELECT COUNT(*) FROM lasagna_simulations WHERE created_at >= CURRENT_DATE AND user_id NOT IN (SELECT id FROM admin_ids))::bigint AS sims_today,
           (
-            (SELECT COUNT(*) FROM country_notes     WHERE created_at >= CURRENT_DATE) +
-            (SELECT COUNT(*) FROM country_edits     WHERE created_at >= CURRENT_DATE) +
-            (SELECT COUNT(*) FROM capital_flows     WHERE created_at >= CURRENT_DATE) +
-            (SELECT COUNT(*) FROM country_relations WHERE created_at >= CURRENT_DATE)
+            (SELECT COUNT(*) FROM country_notes     WHERE created_at >= CURRENT_DATE AND user_id NOT IN (SELECT id FROM admin_ids)) +
+            (SELECT COUNT(*) FROM country_edits     WHERE created_at >= CURRENT_DATE AND user_id NOT IN (SELECT id FROM admin_ids)) +
+            (SELECT COUNT(*) FROM capital_flows     WHERE created_at >= CURRENT_DATE AND user_id NOT IN (SELECT id FROM admin_ids)) +
+            (SELECT COUNT(*) FROM country_relations WHERE created_at >= CURRENT_DATE AND user_id NOT IN (SELECT id FROM admin_ids))
           )::bigint AS macro_today,
           (
-            (SELECT COUNT(*) FROM custom_districts  WHERE created_at >= CURRENT_DATE) +
-            (SELECT COUNT(*) FROM district_notes    WHERE created_at >= CURRENT_DATE) +
-            (SELECT COUNT(*) FROM district_edits    WHERE created_at >= CURRENT_DATE) +
-            (SELECT COUNT(*) FROM district_overrides WHERE created_at >= CURRENT_DATE)
+            (SELECT COUNT(*) FROM custom_districts  WHERE created_at >= CURRENT_DATE AND user_id NOT IN (SELECT id FROM admin_ids)) +
+            (SELECT COUNT(*) FROM district_notes    WHERE created_at >= CURRENT_DATE AND user_id NOT IN (SELECT id FROM admin_ids)) +
+            (SELECT COUNT(*) FROM district_edits    WHERE created_at >= CURRENT_DATE AND user_id NOT IN (SELECT id FROM admin_ids)) +
+            (SELECT COUNT(*) FROM district_overrides WHERE created_at >= CURRENT_DATE AND user_id NOT IN (SELECT id FROM admin_ids))
           )::bigint AS treasure_today,
-          (SELECT COUNT(*) FROM mind_maps WHERE created_at >= CURRENT_DATE)::bigint AS mind_today;
+          (SELECT COUNT(*) FROM mind_maps WHERE created_at >= CURRENT_DATE AND user_id NOT IN (SELECT id FROM admin_ids))::bigint AS mind_today;
       `,
     ]);
 
