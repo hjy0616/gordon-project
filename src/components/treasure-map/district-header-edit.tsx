@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Trash2, RotateCcw, X } from "lucide-react";
 import { useTreasureMapStore } from "@/lib/stores/treasure-map-store";
 import { isCustomDistrict } from "@/lib/treasure-map-utils";
 import {
   TIER_COLORS,
   TIER_LABELS,
+  CUSTOM_DISTRICT_COLORS,
   type SurvivalTier,
   type KoreanDistrict,
   type CustomDistrict,
@@ -43,6 +44,13 @@ export function DistrictHeaderEdit({ district }: DistrictHeaderEditProps) {
   const [localTierReason, setLocalTierReason] = useState(district.tierReason);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  // Highlight ring on mount (parent uses key={district.id} so this fires every selection change)
+  const [highlight, setHighlight] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setHighlight(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleTierChange = useCallback(
     (tier: SurvivalTier) => {
       if (custom) {
@@ -78,7 +86,11 @@ export function DistrictHeaderEdit({ district }: DistrictHeaderEditProps) {
   }, [restoreMockDistrict, district.id]);
 
   return (
-    <div className="relative flex-shrink-0 border-b border-border px-4 py-4">
+    <div
+      className={`relative flex-shrink-0 border-b border-border px-4 py-4 transition-shadow duration-700 ${
+        highlight ? "shadow-[inset_0_0_0_2px_rgba(251,146,60,0.55)]" : ""
+      }`}
+    >
       {/* Action buttons */}
       <div className="absolute right-3 top-3 flex items-center gap-1">
         {hasEdits && (
@@ -161,6 +173,30 @@ export function DistrictHeaderEdit({ district }: DistrictHeaderEditProps) {
         className="mt-2 w-full resize-none rounded-md border border-border bg-background px-2.5 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         rows={2}
       />
+
+      {/* Color picker (custom only) */}
+      {custom && (
+        <div className="mt-3">
+          <p className="mb-1.5 text-[11px] text-muted-foreground">지도 표시 색상</p>
+          <div className="flex flex-wrap gap-1.5">
+            {CUSTOM_DISTRICT_COLORS.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => updateCustomDistrict(district.id, { color: c.value })}
+                aria-label={c.label}
+                title={c.label}
+                className={`h-6 w-6 rounded-full border-2 transition-transform ${
+                  district.color === c.value
+                    ? "scale-110 border-foreground"
+                    : "border-transparent hover:scale-105"
+                }`}
+                style={{ backgroundColor: c.value }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

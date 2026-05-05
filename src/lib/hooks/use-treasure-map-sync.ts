@@ -25,7 +25,13 @@ export function useTreasureMapSync() {
       ]);
 
       if (districts && districts.length > 0) {
-        useTreasureMapStore.setState({ customDistricts: districts });
+        // 하위 호환: color/matchedDistrictId 없는 기존 행에 기본값 주입
+        const hydrated = districts.map((d) => ({
+          ...d,
+          color: d.color ?? null,
+          matchedDistrictId: d.matchedDistrictId ?? null,
+        }));
+        useTreasureMapStore.setState({ customDistricts: hydrated });
       }
 
       if (notes && Object.keys(notes).length > 0) {

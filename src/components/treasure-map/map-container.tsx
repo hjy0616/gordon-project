@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import maplibregl from "maplibre-gl";
 import { useTheme } from "next-themes";
 import { useTreasureMapStore } from "@/lib/stores/treasure-map-store";
 import { TIER_COLORS } from "@/types/treasure-map";
+import {
+  loadKoreaDistrictsGeoJSON,
+  findMatchingDistrictId,
+} from "@/lib/treasure-map-utils";
 import { reverseGeocode, parseKoreanAddress } from "@/lib/nominatim";
 import { MapSearchBar } from "./map-search-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -31,6 +35,22 @@ function findLabelLayerId(map: maplibregl.Map): string | undefined {
 
 import { fetchStyle } from "@/lib/map-style-utils";
 
+function defaultFillColorExpression(): maplibregl.ExpressionSpecification {
+  return [
+    "match",
+    ["get", "tier"],
+    "HIGHEST",
+    TIER_COLORS.HIGHEST,
+    "HIGH",
+    TIER_COLORS.HIGH,
+    "MEDIUM",
+    TIER_COLORS.MEDIUM,
+    "MODERATE",
+    TIER_COLORS.MODERATE,
+    "#757575",
+  ];
+}
+
 export function MapContainer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -40,6 +60,10 @@ export function MapContainer() {
   const selectedIdRef = useRef<string | null>(null);
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const draftMarkerRef = useRef<maplibregl.Marker | null>(null);
+  // Re-render trigger for effects that depend on the GeoJSON layer being live.
+  // readyRef alone is a ref so it can't drive React; we bump readyTick whenever it flips so
+  // hydrated customDistricts get re-evaluated for auto-match and polygon coloring.
+  const [readyTick, setReadyTick] = useState(0);
   const { resolvedTheme } = useTheme();
 
   const isMobile = useIsMobile();
@@ -63,25 +87,14 @@ export function MapContainer() {
     });
 
     // -- Fill layer --
+    // Default fill-color (tier-based). Custom polygon colors are applied via setPaintProperty in a separate effect.
     map.addLayer(
       {
         id: "districts-fill",
         type: "fill",
         source: "korea-districts",
         paint: {
-          "fill-color": [
-            "match",
-            ["get", "tier"],
-            "HIGHEST",
-            TIER_COLORS.HIGHEST,
-            "HIGH",
-            TIER_COLORS.HIGH,
-            "MEDIUM",
-            TIER_COLORS.MEDIUM,
-            "MODERATE",
-            TIER_COLORS.MODERATE,
-            "#757575",
-          ],
+          "fill-color": defaultFillColorExpression(),
           "fill-opacity": [
             "case",
             ["boolean", ["feature-state", "hover"], false],
@@ -130,8 +143,100 @@ export function MapContainer() {
       beforeId,
     );
 
+    // -- Custom-district fallback rectangles --
+    // For unmatched custom districts (no行政구역 polygon match), draw a small square
+    // colored area at the lng/lat instead of a pin marker. Data is pushed via setData in a
+    // separate effect that watches customDistricts.
+    map.addSource("custom-rects", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+      promoteId: "id",
+    });
+
+    map.addLayer(
+      {
+        id: "custom-rects-fill",
+        type: "fill",
+        source: "custom-rects",
+        paint: {
+          "fill-color": ["get", "color"],
+          "fill-opacity": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            0.85,
+            0.6,
+          ],
+        },
+      },
+      beforeId,
+    );
+
+    map.addLayer(
+      {
+        id: "custom-rects-border",
+        type: "line",
+        source: "custom-rects",
+        paint: {
+          "line-color": "#FFFFFF",
+          "line-width": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            2.5,
+            ["boolean", ["feature-state", "hover"], false],
+            1.5,
+            0.8,
+          ],
+          "line-opacity": 0.85,
+        },
+      },
+      beforeId,
+    );
+
     readyRef.current = true;
+    // Notify dependent effects (auto-match, paint coloring) so they re-run for already-hydrated districts.
+    setReadyTick((t) => t + 1);
   }, []);
+
+  // -- Apply custom polygon coloring (matched districts) --
+  // Declared before the theme-change effect so it's already in scope when that effect's deps array is evaluated.
+  // Color contract: `color: null` means "use the custom district's tier color" (NOT the polygon's GeoJSON tier).
+  // That keeps legacy/API rows with matchedDistrictId but no chosen color visually correct.
+  const applyCustomColoring = useCallback(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current || !map.getLayer("districts-fill")) return;
+
+    const matched = customDistricts.filter(
+      (d): d is typeof d & { matchedDistrictId: string } => !!d.matchedDistrictId,
+    );
+
+    if (matched.length === 0) {
+      map.setPaintProperty(
+        "districts-fill",
+        "fill-color",
+        defaultFillColorExpression(),
+      );
+      return;
+    }
+
+    const matchPairs: (string | string[])[] = [];
+    for (const d of matched) {
+      const effectiveColor = d.color ?? TIER_COLORS[d.tier];
+      matchPairs.push(d.matchedDistrictId, effectiveColor);
+    }
+
+    const expr: unknown = [
+      "match",
+      ["get", "id"],
+      ...matchPairs,
+      defaultFillColorExpression(),
+    ];
+    map.setPaintProperty(
+      "districts-fill",
+      "fill-color",
+      expr as maplibregl.ExpressionSpecification,
+    );
+    // readyTick is intentionally a dep so this re-runs once the layer becomes live (hydrate-race fix).
+  }, [customDistricts, readyTick]);
 
   // -- Map initialization --
   useEffect(() => {
@@ -215,26 +320,19 @@ export function MapContainer() {
       map.on("click", "districts-fill", (e) => {
         if (!e.features?.length) return;
         const props = e.features[0].properties;
-        const id = props?.id as string;
-        if (!id) return;
+        const featureId = props?.id as string;
+        if (!featureId) return;
 
         const st = useTreasureMapStore.getState();
 
-        // Clear previous selection feature state
-        if (selectedIdRef.current) {
-          map.setFeatureState(
-            { source: "korea-districts", id: selectedIdRef.current },
-            { selected: false },
-          );
-        }
-
-        // Set new selection
-        selectedIdRef.current = id;
-        map.setFeatureState(
-          { source: "korea-districts", id },
-          { selected: true },
+        // If a custom district is matched to this polygon, prefer the custom id for the panel
+        const matchedCustom = st.customDistricts.find(
+          (c) => c.matchedDistrictId === featureId,
         );
-        st.selectDistrict(id);
+        const panelId = matchedCustom ? matchedCustom.id : featureId;
+
+        // Selection feature-state is driven by the GeoJSON feature id (the selection-sync effect handles cleanup)
+        st.selectDistrict(panelId);
 
         // Fly to clicked location
         map.flyTo({
@@ -244,11 +342,58 @@ export function MapContainer() {
         });
       });
 
+      // -- Custom-rect (unmatched fallback) click --
+      map.on("click", "custom-rects-fill", (e) => {
+        if (!e.features?.length) return;
+        const districtId = e.features[0].properties?.id as string | undefined;
+        if (!districtId) return;
+        useTreasureMapStore.getState().selectDistrict(districtId);
+        map.flyTo({
+          center: [e.lngLat.lng, e.lngLat.lat],
+          zoom: 12,
+          duration: 800,
+        });
+      });
+
+      // -- Custom-rect hover --
+      const customRectHoverIdRef = { current: null as string | null };
+      map.on("mousemove", "custom-rects-fill", (e) => {
+        if (!e.features?.length) return;
+        map.getCanvas().style.cursor = "pointer";
+        const id = e.features[0].properties?.id as string | undefined;
+        if (
+          customRectHoverIdRef.current &&
+          customRectHoverIdRef.current !== id
+        ) {
+          map.setFeatureState(
+            { source: "custom-rects", id: customRectHoverIdRef.current },
+            { hover: false },
+          );
+        }
+        if (id) {
+          customRectHoverIdRef.current = id;
+          map.setFeatureState(
+            { source: "custom-rects", id },
+            { hover: true },
+          );
+        }
+      });
+      map.on("mouseleave", "custom-rects-fill", () => {
+        map.getCanvas().style.cursor = "";
+        if (customRectHoverIdRef.current) {
+          map.setFeatureState(
+            { source: "custom-rects", id: customRectHoverIdRef.current },
+            { hover: false },
+          );
+          customRectHoverIdRef.current = null;
+        }
+      });
+
       // -- Empty area click --
       map.on("click", (e) => {
         if (!readyRef.current || !map.getLayer("districts-fill")) return;
         const features = map.queryRenderedFeatures(e.point, {
-          layers: ["districts-fill"],
+          layers: ["districts-fill", "custom-rects-fill"],
         });
         if (!features.length) {
           if (selectedIdRef.current) {
@@ -290,96 +435,160 @@ export function MapContainer() {
       if (!mapRef.current) return;
       mapRef.current.setStyle(style);
       mapRef.current.once("style.load", () => {
-        if (mapRef.current) addCustomLayers(mapRef.current);
+        if (!mapRef.current) return;
+        addCustomLayers(mapRef.current);
+        // Re-apply custom polygon coloring after style swap (addCustomLayers resets fill-color to default)
+        applyCustomColoring();
       });
     });
-  }, [resolvedTheme, addCustomLayers]);
+  }, [resolvedTheme, addCustomLayers, applyCustomColoring]);
 
-  // -- Sync selected district from store --
+  // -- Sync selected feature-state from store --
+  // selectedDistrict can be: a mock district id (== korea-districts feature id), a matched custom
+  // district (use matchedDistrictId on korea-districts), or an unmatched custom district (drive
+  // selected state on the custom-rects source instead).
+  const selectedRectIdRef = useRef<string | null>(null);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
 
-    // Clear previous
-    if (selectedIdRef.current && selectedIdRef.current !== selectedDistrict) {
+    // Clear previous selections from both sources
+    if (selectedIdRef.current) {
       map.setFeatureState(
         { source: "korea-districts", id: selectedIdRef.current },
         { selected: false },
       );
+      selectedIdRef.current = null;
+    }
+    if (selectedRectIdRef.current) {
+      map.setFeatureState(
+        { source: "custom-rects", id: selectedRectIdRef.current },
+        { selected: false },
+      );
+      selectedRectIdRef.current = null;
     }
 
-    // Set new
-    if (selectedDistrict) {
+    if (!selectedDistrict) return;
+
+    const customMatch = customDistricts.find((c) => c.id === selectedDistrict);
+    if (customMatch) {
+      if (customMatch.matchedDistrictId) {
+        // Matched: highlight the real korea-districts polygon
+        map.setFeatureState(
+          { source: "korea-districts", id: customMatch.matchedDistrictId },
+          { selected: true },
+        );
+        selectedIdRef.current = customMatch.matchedDistrictId;
+      } else {
+        // Unmatched: highlight the fallback rectangle
+        map.setFeatureState(
+          { source: "custom-rects", id: customMatch.id },
+          { selected: true },
+        );
+        selectedRectIdRef.current = customMatch.id;
+      }
+    } else {
+      // Mock district id (matches a korea-districts feature id directly)
       map.setFeatureState(
         { source: "korea-districts", id: selectedDistrict },
         { selected: true },
       );
+      selectedIdRef.current = selectedDistrict;
     }
+  }, [selectedDistrict, customDistricts]);
 
-    selectedIdRef.current = selectedDistrict;
-  }, [selectedDistrict]);
-
-  // -- Custom district pin markers --
+  // -- Custom district unmatched fallback rectangles --
+  // Matched districts are painted via applyCustomColoring on the korea-districts polygon.
+  // Unmatched districts get a small ~500m square colored area centered on their lng/lat,
+  // pushed into the custom-rects GeoJSON source. No DOM markers anywhere — the rectangle is
+  // a real map feature so it pans/zooms with the rest of the map and can't drift from the cursor.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !readyRef.current) return;
+    const source = map.getSource("custom-rects") as
+      | maplibregl.GeoJSONSource
+      | undefined;
+    if (!source) return;
 
-    const currentIds = new Set(customDistricts.map((d) => d.id));
+    // Half-extents in degrees: ~3km at Korean latitudes (구·읍·면 단위 영역 크기).
+    const HALF_LAT = 0.027;
+    const HALF_LNG = 0.034;
 
-    // Remove markers for districts that no longer exist
-    for (const [id, marker] of markersRef.current) {
-      if (!currentIds.has(id)) {
-        marker.remove();
-        markersRef.current.delete(id);
+    const features: GeoJSON.Feature[] = customDistricts
+      .filter((d) => !d.matchedDistrictId)
+      .map((d) => {
+        const color = d.color ?? TIER_COLORS[d.tier];
+        return {
+          type: "Feature",
+          id: d.id,
+          properties: { id: d.id, color },
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [d.lng - HALF_LNG, d.lat - HALF_LAT],
+                [d.lng + HALF_LNG, d.lat - HALF_LAT],
+                [d.lng + HALF_LNG, d.lat + HALF_LAT],
+                [d.lng - HALF_LNG, d.lat + HALF_LAT],
+                [d.lng - HALF_LNG, d.lat - HALF_LAT],
+              ],
+            ],
+          },
+        };
+      });
+
+    source.setData({ type: "FeatureCollection", features });
+
+    // Clean up any DOM markers from earlier versions (no-op once this code has been live).
+    for (const [, marker] of markersRef.current) marker.remove();
+    markersRef.current.clear();
+  }, [customDistricts, readyTick]);
+
+  useEffect(() => {
+    applyCustomColoring();
+  }, [applyCustomColoring]);
+
+  // -- Backfill matchedDistrictId for legacy/hydrated districts that don't have one yet --
+  // New districts created via the form already arrive with matchedDistrictId computed up-front
+  // (see district-create-form.handleSubmit), so this effect only runs for legacy rows hydrated
+  // from the DB without a match. Uses GeoJSON ray-casting — independent of viewport, so offscreen
+  // districts (especially on mobile) are matched too.
+  useEffect(() => {
+    const candidates = customDistricts.filter(
+      (d) => d.matchedDistrictId === null,
+    );
+    if (candidates.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      const geojson = await loadKoreaDistrictsGeoJSON();
+      if (cancelled || !geojson) return;
+
+      for (const district of candidates) {
+        // Live re-check in case the user already deleted/edited it during the await.
+        const live = useTreasureMapStore
+          .getState()
+          .customDistricts.find((d) => d.id === district.id);
+        if (!live || live.matchedDistrictId !== null) continue;
+
+        const matchedId = findMatchingDistrictId(
+          district.lat,
+          district.lng,
+          geojson,
+        );
+        if (!matchedId) continue;
+
+        // store.updateCustomDistrict handles both local state and the PUT to /api/treasure-map/districts.
+        // The legacy row already exists server-side (it came from a GET), so there's no POST/PUT race here.
+        useTreasureMapStore
+          .getState()
+          .updateCustomDistrict(district.id, { matchedDistrictId: matchedId });
       }
-    }
+    })();
 
-    // Add or update markers for current custom districts
-    for (const district of customDistricts) {
-      const existing = markersRef.current.get(district.id);
-      if (existing) {
-        // Update position if changed
-        existing.setLngLat([district.lng, district.lat]);
-        // Update color
-        const el = existing.getElement();
-        el.style.background = TIER_COLORS[district.tier];
-        continue;
-      }
-
-      // Create new marker
-      const el = document.createElement("div");
-      el.style.cssText = `
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 2px solid white;
-        background: ${TIER_COLORS[district.tier]};
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        transition: transform 0.15s;
-      `;
-      el.addEventListener("mouseenter", () => {
-        el.style.transform = "scale(1.3)";
-      });
-      el.addEventListener("mouseleave", () => {
-        el.style.transform = "scale(1)";
-      });
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        useTreasureMapStore.getState().selectDistrict(district.id);
-        map.flyTo({
-          center: [district.lng, district.lat],
-          zoom: 11,
-          duration: 800,
-        });
-      });
-
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([district.lng, district.lat])
-        .addTo(map);
-
-      markersRef.current.set(district.id, marker);
-    }
+    return () => {
+      cancelled = true;
+    };
   }, [customDistricts]);
 
   // -- Filter deleted mock districts from GeoJSON layers --

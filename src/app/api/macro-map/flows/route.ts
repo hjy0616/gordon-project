@@ -22,6 +22,8 @@ export async function GET() {
       volume: f.volume,
       type: f.type,
       label: f.label,
+      color: f.color,
+      lineStyle: f.lineStyle,
     }))
   );
 }
@@ -34,6 +36,7 @@ export async function POST(req: Request) {
 
   const flow = await prisma.capitalFlow.create({
     data: {
+      ...(body.id && { id: body.id }),
       userId: user.id,
       fromIso: body.from_iso,
       toIso: body.to_iso,
@@ -42,6 +45,8 @@ export async function POST(req: Request) {
       volume: body.volume,
       type: body.type as FlowType,
       label: body.label ?? "",
+      color: body.color ?? "#e67e22",
+      lineStyle: body.lineStyle ?? "dashed",
     },
   });
 
@@ -54,6 +59,8 @@ export async function POST(req: Request) {
     volume: flow.volume,
     type: flow.type,
     label: flow.label,
+    color: flow.color,
+    lineStyle: flow.lineStyle,
   }, { status: 201 });
 }
 
@@ -77,6 +84,8 @@ export async function PUT(req: Request) {
       ...(body.volume !== undefined && { volume: body.volume }),
       ...(body.type !== undefined && { type: body.type as FlowType }),
       ...(body.label !== undefined && { label: body.label }),
+      ...(body.color !== undefined && { color: body.color }),
+      ...(body.lineStyle !== undefined && { lineStyle: body.lineStyle }),
     },
   });
 

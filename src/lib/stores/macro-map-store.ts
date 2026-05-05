@@ -8,7 +8,6 @@ import type {
   EditTab,
   LineStyle,
 } from "@/types/macro-map";
-import { MOCK_RELATIONS } from "@/data/mock-relations";
 import { COUNTRY_CENTROIDS } from "@/data/country-centroids";
 import { syncToServer } from "@/lib/api-sync";
 
@@ -26,8 +25,8 @@ export const useMacroMapStore = create<MacroMapState & MacroMapActions>()(
     showScorecard: false,
     continentTags: {},
     countryEdits: {},
-    // 관계선
-    relations: MOCK_RELATIONS,
+    // 관계선 (빈 시작 — 사용자가 직접 추가, hydrate 시 DB 데이터로 채워짐)
+    relations: [],
     showRelations: false,
     // 통합 편집 모드
     editMode: false,

@@ -16,6 +16,18 @@ export async function syncToServer(
     });
     if (!res.ok) {
       console.error(`[sync] ${method} ${url} failed:`, res.status);
+    } else if (method === "PUT") {
+      // PUT 0-row → id mismatch (실제 문제). DELETE 0-row는 idempotent라 정상 (예: client-only mock fixture 삭제).
+      try {
+        const data = await res.clone().json();
+        if (data && data.updated === 0) {
+          console.warn(
+            `[sync] PUT ${url} updated 0 rows — possible client/server id mismatch`,
+          );
+        }
+      } catch {
+        /* non-JSON response, ignore */
+      }
     }
     return res;
   } catch (err) {

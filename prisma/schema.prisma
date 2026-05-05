@@ -182,6 +182,8 @@ model CapitalFlow {
   volume     Float
   type       FlowType
   label      String   @default("")
+  color      String   @default("#e67e22")
+  lineStyle  String   @default("dashed") @map("line_style")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
@@ -199,6 +201,8 @@ model CountryRelation {
   fromIso   String       @map("from_iso")
   toIso     String       @map("to_iso")
   type      RelationType
+  color     String       @default("#3b82f6")
+  lineStyle String       @default("solid") @map("line_style")
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime     @updatedAt @map("updated_at")
 
@@ -214,20 +218,22 @@ model CountryRelation {
 // ══════════════════════════════════════════════════════════
 
 model CustomDistrict {
-  id         String       @id @default(cuid())
-  userId     String       @map("user_id")
-  nameKo     String       @map("name_ko")
-  nameEn     String       @map("name_en")
-  region     String
-  tier       SurvivalTier
-  tierReason String       @map("tier_reason") @db.Text
-  lat        Float
-  lng        Float
-  criteria   Json
-  haasScores Json         @map("haas_scores")
-  rightsData Json?        @map("rights_data")
-  createdAt  DateTime     @default(now()) @map("created_at")
-  updatedAt  DateTime     @updatedAt @map("updated_at")
+  id                String       @id @default(cuid())
+  userId            String       @map("user_id")
+  nameKo            String       @map("name_ko")
+  nameEn            String       @map("name_en")
+  region            String
+  tier              SurvivalTier
+  tierReason        String       @map("tier_reason") @db.Text
+  lat               Float
+  lng               Float
+  color             String?
+  matchedDistrictId String?      @map("matched_district_id")
+  criteria          Json
+  haasScores        Json         @map("haas_scores")
+  rightsData        Json?        @map("rights_data")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

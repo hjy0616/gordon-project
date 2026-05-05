@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMacroMapStore } from "@/lib/stores/macro-map-store";
 import { getCountryNameKo, getFlagEmoji } from "@/data/country-names";
+import { COUNTRY_CENTROIDS } from "@/data/country-centroids";
 import { Button } from "@/components/ui/button";
 import { Check, X, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -286,11 +287,26 @@ function EditPopoverForm({
           </div>
 
           {/* 액션 */}
+          {(!COUNTRY_CENTROIDS[editBase] || !COUNTRY_CENTROIDS[popover.targetIso]) && (
+            <div className="mb-1.5 text-[11px] text-amber-500">
+              이 국가 쌍은 좌표 데이터가 없어 라인을 그릴 수 없습니다.
+            </div>
+          )}
+          {(!volume || Number(volume) <= 0) && (
+            <div className="mb-1.5 text-[11px] text-muted-foreground">
+              규모를 입력하면 추가할 수 있어요
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <Button
               size="sm"
               onClick={handleFlowConfirm}
-              disabled={!volume || Number(volume) <= 0}
+              disabled={
+                !volume ||
+                Number(volume) <= 0 ||
+                !COUNTRY_CENTROIDS[editBase] ||
+                !COUNTRY_CENTROIDS[popover.targetIso]
+              }
               className="flex-1 gap-1.5 bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50"
             >
               <Check className="h-4 w-4" />

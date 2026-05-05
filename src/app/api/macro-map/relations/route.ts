@@ -18,8 +18,8 @@ export async function GET() {
 
   // 양방향 확장
   const expanded = relations.flatMap((r) => [
-    { id: r.id, from_iso: r.fromIso, to_iso: r.toIso, type: r.type },
-    { id: r.id, from_iso: r.toIso, to_iso: r.fromIso, type: r.type },
+    { id: r.id, from_iso: r.fromIso, to_iso: r.toIso, type: r.type, color: r.color, lineStyle: r.lineStyle },
+    { id: r.id, from_iso: r.toIso, to_iso: r.fromIso, type: r.type, color: r.color, lineStyle: r.lineStyle },
   ]);
 
   return NextResponse.json(expanded);
@@ -31,17 +31,26 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const [fromIso, toIso] = canonical(body.from_iso, body.to_iso);
+  const isAlly = body.type === "ally";
+  const defaultColor = isAlly ? "#3b82f6" : "#800020";
+  const defaultLineStyle = isAlly ? "solid" : "dashed";
 
   const relation = await prisma.countryRelation.upsert({
     where: {
       userId_fromIso_toIso: { userId: user.id, fromIso, toIso },
     },
-    update: { type: body.type as RelationType },
+    update: {
+      type: body.type as RelationType,
+      ...(body.color !== undefined && { color: body.color }),
+      ...(body.lineStyle !== undefined && { lineStyle: body.lineStyle }),
+    },
     create: {
       userId: user.id,
       fromIso,
       toIso,
       type: body.type as RelationType,
+      color: body.color ?? defaultColor,
+      lineStyle: body.lineStyle ?? defaultLineStyle,
     },
   });
 
@@ -50,6 +59,8 @@ export async function POST(req: Request) {
     from_iso: relation.fromIso,
     to_iso: relation.toIso,
     type: relation.type,
+    color: relation.color,
+    lineStyle: relation.lineStyle,
   }, { status: 201 });
 }
 

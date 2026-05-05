@@ -213,7 +213,21 @@ export interface CustomDistrict extends KoreanDistrict {
   isCustom: true;
   lat: number;
   lng: number;
+  /** 사용자가 고른 색. null이면 tier 기본 색 사용. */
+  color: string | null;
+  /** point-in-polygon 매칭 결과. null이면 fallback 핀 표시. */
+  matchedDistrictId: string | null;
 }
+
+// ── Custom district color presets (사용자 선택용) ──
+export const CUSTOM_DISTRICT_COLORS: { value: string; label: string }[] = [
+  { value: "#ef4444", label: "빨강" },
+  { value: "#3b82f6", label: "파랑" },
+  { value: "#eab308", label: "노랑" },
+  { value: "#22c55e", label: "초록" },
+  { value: "#a855f7", label: "보라" },
+  { value: "#6b7280", label: "회색" },
+];
 
 // ── District overrides (user edits to mock districts) ──
 export interface DistrictOverrides {

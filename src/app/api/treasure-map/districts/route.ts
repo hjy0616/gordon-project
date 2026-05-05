@@ -26,6 +26,8 @@ export async function GET() {
       criteria: d.criteria,
       haasScores: d.haasScores,
       rightsData: d.rightsData,
+      color: d.color,
+      matchedDistrictId: d.matchedDistrictId,
     }))
   );
 }
@@ -38,6 +40,7 @@ export async function POST(req: Request) {
 
   const district = await prisma.customDistrict.create({
     data: {
+      ...(body.id && { id: body.id }),
       userId: user.id,
       nameKo: body.name_ko,
       nameEn: body.name_en ?? "",
@@ -49,6 +52,8 @@ export async function POST(req: Request) {
       criteria: body.criteria ?? {},
       haasScores: body.haasScores ?? {},
       rightsData: body.rightsData ?? null,
+      color: body.color ?? null,
+      matchedDistrictId: body.matchedDistrictId ?? null,
     },
   });
 
@@ -65,6 +70,8 @@ export async function POST(req: Request) {
     criteria: district.criteria,
     haasScores: district.haasScores,
     rightsData: district.rightsData,
+    color: district.color,
+    matchedDistrictId: district.matchedDistrictId,
   }, { status: 201 });
 }
 
@@ -89,6 +96,8 @@ export async function PUT(req: Request) {
   if (fields.criteria !== undefined) data.criteria = fields.criteria;
   if (fields.haasScores !== undefined) data.haasScores = fields.haasScores;
   if (fields.rightsData !== undefined) data.rightsData = fields.rightsData;
+  if (fields.color !== undefined) data.color = fields.color;
+  if (fields.matchedDistrictId !== undefined) data.matchedDistrictId = fields.matchedDistrictId;
 
   const updated = await prisma.customDistrict.updateMany({
     where: { id, userId: user.id },

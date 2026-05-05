@@ -6,9 +6,14 @@ import { useTreasureMapStore } from "@/lib/stores/treasure-map-store";
 import {
   TIER_LABELS,
   TIER_COLORS,
+  CUSTOM_DISTRICT_COLORS,
   type SurvivalTier,
 } from "@/types/treasure-map";
 import { Input } from "@/components/ui/input";
+import {
+  loadKoreaDistrictsGeoJSON,
+  findMatchingDistrictId,
+} from "@/lib/treasure-map-utils";
 
 const TIERS: SurvivalTier[] = ["HIGHEST", "HIGH", "MEDIUM", "MODERATE", "LOW"];
 
@@ -22,11 +27,27 @@ export function DistrictCreateForm() {
   const [nameEn, setNameEn] = useState("");
   const [tier, setTier] = useState<SurvivalTier>("MEDIUM");
   const [tierReason, setTierReason] = useState("");
+  const [color, setColor] = useState<string>(CUSTOM_DISTRICT_COLORS[0].value);
 
   const isValid = nameKo.trim() !== "" && createDraft !== null;
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    if (!isValid || !createDraft) return;
+  const handleSubmit = async () => {
+    if (!isValid || !createDraft || submitting) return;
+    setSubmitting(true);
+
+    // Compute matchedDistrictId via real point-in-polygon BEFORE create, so the first POST
+    // already carries it. No POST/PUT race, no viewport dependency, no offscreen failure.
+    let matchedDistrictId: string | null = null;
+    const geojson = await loadKoreaDistrictsGeoJSON();
+    if (geojson) {
+      matchedDistrictId = findMatchingDistrictId(
+        createDraft.lat,
+        createDraft.lng,
+        geojson,
+      );
+    }
+
     addCustomDistrict({
       name_ko: nameKo.trim(),
       name_en: nameEn.trim() || nameKo.trim(),
@@ -35,11 +56,14 @@ export function DistrictCreateForm() {
       tierReason: tierReason.trim(),
       lat: createDraft.lat,
       lng: createDraft.lng,
+      color,
+      matchedDistrictId,
       criteria: undefined as never,
       rightsData: undefined as never,
       haasScores: undefined as never,
     });
     clearCreateDraft();
+    setSubmitting(false);
   };
 
   const handleBack = () => {
@@ -136,6 +160,30 @@ export function DistrictCreateForm() {
           </div>
         </div>
 
+        {/* Color picker */}
+        <div>
+          <label className="mb-1.5 block text-xs text-muted-foreground">
+            지도 표시 색상
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {CUSTOM_DISTRICT_COLORS.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => setColor(c.value)}
+                aria-label={c.label}
+                title={c.label}
+                className={`h-7 w-7 rounded-full border-2 transition-transform ${
+                  color === c.value
+                    ? "scale-110 border-foreground"
+                    : "border-transparent hover:scale-105"
+                }`}
+                style={{ backgroundColor: c.value }}
+              />
+            ))}
+          </div>
+        </div>
+
         <div>
           <label className="mb-1 block text-xs text-muted-foreground">
             등급 사유
@@ -158,10 +206,10 @@ export function DistrictCreateForm() {
       <div className="border-t border-border px-4 py-3">
         <button
           onClick={handleSubmit}
-          disabled={!isValid}
+          disabled={!isValid || submitting}
           className="w-full rounded-md bg-[#A71C2E] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[#8a1726] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          추가
+          {submitting ? "추가 중…" : "추가"}
         </button>
       </div>
     </div>

@@ -244,8 +244,11 @@ export const useTreasureMapStore = create<
           criteria: district.criteria ?? DEFAULT_CRITERIA,
           rightsData: district.rightsData ?? DEFAULT_RIGHTS_DATA,
           haasScores: district.haasScores ?? DEFAULT_HAAS_SCORES,
+          color: district.color ?? null,
+          matchedDistrictId: district.matchedDistrictId ?? null,
         };
         syncToServer("/api/treasure-map/districts", "POST", {
+          id: newDistrict.id,
           name_ko: newDistrict.name_ko,
           name_en: newDistrict.name_en,
           region: newDistrict.region,
@@ -256,6 +259,8 @@ export const useTreasureMapStore = create<
           criteria: newDistrict.criteria,
           haasScores: newDistrict.haasScores,
           rightsData: newDistrict.rightsData,
+          color: newDistrict.color,
+          matchedDistrictId: newDistrict.matchedDistrictId,
         });
         return {
           customDistricts: [...state.customDistricts, newDistrict],
