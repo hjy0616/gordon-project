@@ -73,6 +73,8 @@ export async function PUT(
         verificationImage: current.renewalImage,
         renewalImage: null,
         renewalSubmittedAt: null,
+        renewalRejectionReason: null,
+        renewalRejectedAt: null,
         activeUntil: new Date(activeUntil),
         status: "ACTIVE",
       },

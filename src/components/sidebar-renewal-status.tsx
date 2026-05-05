@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { AlertTriangle, CheckCircle, ShieldCheck, Upload, X } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle,
+  ShieldCheck,
+  Upload,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,6 +34,8 @@ interface RenewalStatus {
   daysRemaining: number | null;
   hasSubmitted: boolean;
   submittedAt: string | null;
+  rejectionReason: string | null;
+  rejectedAt: string | null;
 }
 
 export function SidebarRenewalStatus() {
@@ -97,7 +106,15 @@ export function SidebarRenewalStatus() {
     }
 
     setRenewalStatus((prev) =>
-      prev ? { ...prev, hasSubmitted: true, canSubmit: false } : null
+      prev
+        ? {
+            ...prev,
+            hasSubmitted: true,
+            canSubmit: false,
+            rejectionReason: null,
+            rejectedAt: null,
+          }
+        : null
     );
     setDialogOpen(false);
     setImageFile(null);
@@ -115,6 +132,10 @@ export function SidebarRenewalStatus() {
   });
 
   const hasSubmitted = renewalStatus?.hasSubmitted ?? false;
+  const rejectionReason =
+    renewalStatus && !renewalStatus.hasSubmitted
+      ? renewalStatus.rejectionReason
+      : null;
 
   // --- Collapsed mode: icon + tooltip ---
   if (collapsed) {
@@ -125,7 +146,7 @@ export function SidebarRenewalStatus() {
             render={
               <button
                 type="button"
-                className={`flex size-8 items-center justify-center rounded-md transition-colors ${
+                className={`relative flex size-8 items-center justify-center rounded-md transition-colors ${
                   isExpired
                     ? "bg-destructive/10 text-destructive border border-destructive/30"
                     : isUrgent
@@ -143,12 +164,23 @@ export function SidebarRenewalStatus() {
             ) : (
               <ShieldCheck className="size-4" />
             )}
+            {rejectionReason ? (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -right-0.5 -top-0.5 size-2 rounded-full bg-orange-500 ring-2 ring-sidebar"
+              />
+            ) : null}
           </TooltipTrigger>
           <TooltipContent side="right">
             <p className="font-medium">
               {isExpired ? "이용 기간 만료" : `${daysRemaining}일 남음`}
             </p>
             <p className="text-xs text-muted-foreground">{formattedDate} 만료</p>
+            {rejectionReason ? (
+              <p className="mt-1 max-w-[16rem] text-xs text-orange-500 line-clamp-3">
+                거부 사유: {rejectionReason}
+              </p>
+            ) : null}
           </TooltipContent>
         </Tooltip>
 
@@ -209,6 +241,16 @@ export function SidebarRenewalStatus() {
             <span className="text-foreground/70">({daysRemaining}일 남음)</span>
           )}
         </p>
+
+        {rejectionReason ? (
+          <div className="mt-1.5 flex items-start gap-1.5 rounded-sm bg-orange-500/10 px-2 py-1.5">
+            <AlertCircle className="mt-0.5 size-3.5 shrink-0 text-orange-500" />
+            <p className="text-xs leading-snug text-orange-700 line-clamp-3 break-words dark:text-orange-300">
+              <span className="font-semibold">거부 사유: </span>
+              {rejectionReason}
+            </p>
+          </div>
+        ) : null}
 
         {isUrgent && !hasSubmitted && (
           <Button

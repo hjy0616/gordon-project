@@ -19,6 +19,8 @@ export async function GET() {
       activeUntil: true,
       renewalImage: true,
       renewalSubmittedAt: true,
+      renewalRejectionReason: true,
+      renewalRejectedAt: true,
       status: true,
     },
   });
@@ -43,6 +45,8 @@ export async function GET() {
     daysRemaining,
     hasSubmitted: !!dbUser.renewalImage,
     submittedAt: dbUser.renewalSubmittedAt,
+    rejectionReason: dbUser.renewalRejectionReason,
+    rejectedAt: dbUser.renewalRejectedAt,
   });
 }
 
@@ -119,6 +123,8 @@ export async function POST(req: Request) {
       data: {
         renewalImage: s3Key,
         renewalSubmittedAt: new Date(),
+        renewalRejectionReason: null,
+        renewalRejectedAt: null,
       },
     });
 

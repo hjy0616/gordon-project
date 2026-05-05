@@ -131,7 +131,7 @@ interface ViewState {
 
 const INITIAL_VIEW: ViewState = { scale: 1, x: 0, y: 0, animating: true };
 
-function ZoomableImage({ src, alt }: { src: string; alt: string }) {
+export function ZoomableImage({ src, alt }: { src: string; alt: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<ViewState>(INITIAL_VIEW);
 

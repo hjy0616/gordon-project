@@ -19,6 +19,7 @@ export default function AdminRenewalsPage() {
     setSearch,
     fetchUsers,
     approveRenewal,
+    rejectRenewal,
   } = useAdminUsers({ renewalOnly: true });
 
   const [renewalTarget, setRenewalTarget] = useState<UserRow | null>(null);
@@ -64,6 +65,7 @@ export default function AdminRenewalsPage() {
         user={renewalTarget}
         onClose={() => setRenewalTarget(null)}
         onApprove={approveRenewal}
+        onReject={rejectRenewal}
       />
     </div>
   );

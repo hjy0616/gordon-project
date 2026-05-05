@@ -17,6 +17,8 @@ export interface UserRow {
   verificationImage: string | null;
   renewalImage: string | null;
   renewalSubmittedAt: string | null;
+  renewalRejectionReason: string | null;
+  renewalRejectedAt: string | null;
 }
 
 export interface Pagination {

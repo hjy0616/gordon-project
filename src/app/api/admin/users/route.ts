@@ -46,6 +46,8 @@ export async function GET(req: Request) {
         verificationImage: true,
         renewalImage: true,
         renewalSubmittedAt: true,
+        renewalRejectionReason: true,
+        renewalRejectedAt: true,
       },
       orderBy: { createdAt: "desc" },
       skip,

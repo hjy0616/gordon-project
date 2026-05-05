@@ -52,24 +52,26 @@ enum UserStatus {
 // ══════════════════════════════════════════════════════════
 
 model User {
-  id                 String     @id @default(cuid())
-  name               String?
-  email              String     @unique
-  password           String?
-  image              String?
-  role               Role       @default(USER)
-  status             UserStatus @default(PENDING)
-  verificationImage  String?    @map("verification_image")
-  activeFrom         DateTime?  @map("active_from")
-  activeUntil        DateTime?  @map("active_until")
-  renewalImage       String?    @map("renewal_image")
-  renewalSubmittedAt DateTime?  @map("renewal_submitted_at")
-  lastLoginAt        DateTime?  @map("last_login_at")
-  lastActiveAt       DateTime?  @map("last_active_at")
-  signupSource       String?    @map("signup_source")
-  signupReferer      String?    @map("signup_referer")
-  createdAt          DateTime   @default(now()) @map("created_at")
-  updatedAt          DateTime   @updatedAt @map("updated_at")
+  id                     String     @id @default(cuid())
+  name                   String?
+  email                  String     @unique
+  password               String?
+  image                  String?
+  role                   Role       @default(USER)
+  status                 UserStatus @default(PENDING)
+  verificationImage      String?    @map("verification_image")
+  activeFrom             DateTime?  @map("active_from")
+  activeUntil            DateTime?  @map("active_until")
+  renewalImage           String?    @map("renewal_image")
+  renewalSubmittedAt     DateTime?  @map("renewal_submitted_at")
+  renewalRejectionReason String?    @map("renewal_rejection_reason")
+  renewalRejectedAt      DateTime?  @map("renewal_rejected_at")
+  lastLoginAt            DateTime?  @map("last_login_at")
+  lastActiveAt           DateTime?  @map("last_active_at")
+  signupSource           String?    @map("signup_source")
+  signupReferer          String?    @map("signup_referer")
+  createdAt              DateTime   @default(now()) @map("created_at")
+  updatedAt              DateTime   @updatedAt @map("updated_at")
 
   accounts           Account[]
   sessions           Session[]
