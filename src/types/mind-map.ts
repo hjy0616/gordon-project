@@ -53,6 +53,9 @@ export const NODE_SHAPES = [
 ] as const;
 export type NodeShape = (typeof NODE_SHAPES)[number];
 
+export const NODE_LABEL_ALIGNS = ["left", "center", "right"] as const;
+export type NodeLabelAlign = (typeof NODE_LABEL_ALIGNS)[number];
+
 // 노드 크기 한계 — 너무 작으면 라벨/툴바가 잘리고, 너무 크면 캔버스 도배.
 export const NODE_WIDTH_MIN = 60;
 export const NODE_WIDTH_MAX = 600;
@@ -152,6 +155,7 @@ export interface MindMapNodeData extends Record<string, unknown> {
   shape?: NodeShape; // undefined → "rectangle"
   width?: number; // 사용자 리사이즈 (미설정 시 도형 default)
   height?: number;
+  labelAlign?: NodeLabelAlign; // undefined → "left" fallback (레거시 데이터 보호)
 }
 
 export interface MindMapEdgeData extends Record<string, unknown> {
@@ -316,6 +320,12 @@ function normalizeNodeData(d: MindMapNodeData): MindMapNodeData {
   if (typeof d.shape === "string") out.shape = d.shape;
   if (typeof d.width === "number" && Number.isFinite(d.width)) out.width = d.width;
   if (typeof d.height === "number" && Number.isFinite(d.height)) out.height = d.height;
+  if (
+    typeof d.labelAlign === "string" &&
+    (NODE_LABEL_ALIGNS as readonly string[]).includes(d.labelAlign)
+  ) {
+    out.labelAlign = d.labelAlign as NodeLabelAlign;
+  }
   return out;
 }
 
@@ -416,6 +426,7 @@ export function emptyMindMapNode(
     position,
     data: {
       label: "",
+      labelAlign: "center", // 새 노드 default — 모든 생성 진입점에서 일관 보장
       ...overrides,
     },
   };
