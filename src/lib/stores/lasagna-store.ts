@@ -92,7 +92,8 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
         }));
         const post = syncToServer(API, "POST", sim);
         pendingCreates.set(sim.id, post);
-        post.finally(() => pendingCreates.delete(sim.id));
+        // post는 이미 Map에 등록됐으므로 .finally() 반환 Promise는 cleanup 전용. void로 의도 명시.
+        void post.finally(() => pendingCreates.delete(sim.id));
       },
 
       deleteSimulation: (id) => {
