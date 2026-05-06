@@ -8,6 +8,9 @@ interface EditableLabelProps {
   className?: string;
   readonly?: boolean;
   style?: CSSProperties;
+  // undefined면 text-align class 자동 미적용 (호출자 className 보존).
+  // 명시되면 className 뒤에 text-{left|center|right} 추가 → CSS source order로 우선.
+  align?: "left" | "center" | "right";
 }
 
 export function EditableLabel({
@@ -16,7 +19,16 @@ export function EditableLabel({
   className = "",
   readonly,
   style,
+  align,
 }: EditableLabelProps) {
+  // align이 undefined면 빈 문자열 — 호출자 className의 text-align을 그대로 보존.
+  // Lasagna 노드 3종(event/liquidity/transmission)이 className="text-center"로
+  // 호출 중이므로 자동 적용을 안 해야 회귀가 없다.
+  const alignClass =
+    align === "center" ? "text-center"
+    : align === "right" ? "text-right"
+    : align === "left" ? "text-left"
+    : "";
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -41,7 +53,7 @@ export function EditableLabel({
   if (readonly || !editing) {
     return (
       <div
-        className={`whitespace-pre-wrap break-words ${className}`}
+        className={`whitespace-pre-wrap break-words ${className} ${alignClass}`}
         style={style}
         onDoubleClick={() => {
           if (readonly) return;
@@ -83,7 +95,7 @@ export function EditableLabel({
         colorScheme: "light dark",
         ...style,
       }}
-      className={`w-full resize-none rounded border border-primary/50 bg-transparent px-1 py-0 outline-none text-inherit ${className}`}
+      className={`w-full resize-none rounded border border-primary/50 bg-transparent px-1 py-0 outline-none text-inherit ${className} ${alignClass}`}
     />
   );
 }
