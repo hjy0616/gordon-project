@@ -6,6 +6,7 @@ import {
   NODE_COLORS,
   NODE_HEIGHT_MAX,
   NODE_HEIGHT_MIN,
+  NODE_LABEL_ALIGNS,
   NODE_SHAPES,
   NODE_WIDTH_MAX,
   NODE_WIDTH_MIN,
@@ -15,6 +16,7 @@ import {
   type EdgeWidth,
   type MindMapEdgeStyle,
   type NodeColor,
+  type NodeLabelAlign,
   type NodeShape,
   type StoredMindMapEdge,
   type StoredMindMapNode,
@@ -32,6 +34,7 @@ export const PAYLOAD_BYTE_LIMIT = 1_000_000;
 
 const COLOR_SET = new Set<NodeColor>(NODE_COLORS);
 const SHAPE_SET = new Set<NodeShape>(NODE_SHAPES);
+const ALIGN_SET = new Set<NodeLabelAlign>(NODE_LABEL_ALIGNS);
 const DASH_SET = new Set<EdgeDash>(EDGE_DASHES);
 const ARROW_SET = new Set<EdgeArrow>(EDGE_ARROWS);
 const CURVATURE_SET = new Set<EdgeCurvature>(EDGE_CURVATURES);
@@ -264,6 +267,17 @@ function validateNode(
       };
     }
   }
+  if (d.labelAlign !== undefined) {
+    if (
+      typeof d.labelAlign !== "string" ||
+      !ALIGN_SET.has(d.labelAlign as NodeLabelAlign)
+    ) {
+      return {
+        ok: false,
+        error: `nodes[${index}].data.labelAlign: ${[...NODE_LABEL_ALIGNS].join("|")} 중 하나`,
+      };
+    }
+  }
 
   // 키 순서 고정 — toStoredNodes/normalizeNodeData와 동일해야 lastSyncedRef 안정.
   const value: StoredMindMapNode = {
@@ -277,6 +291,9 @@ function validateNode(
       ...(typeof d.shape === "string" ? { shape: d.shape as NodeShape } : {}),
       ...(isFiniteNumber(d.width) ? { width: d.width } : {}),
       ...(isFiniteNumber(d.height) ? { height: d.height } : {}),
+      ...(typeof d.labelAlign === "string"
+        ? { labelAlign: d.labelAlign as NodeLabelAlign }
+        : {}),
     },
   };
   return { ok: true, value };
