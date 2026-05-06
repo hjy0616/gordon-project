@@ -8,16 +8,21 @@ import {
   Diamond,
   Hexagon,
   StickyNote,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
 } from "lucide-react";
 import { useReactFlow } from "@xyflow/react";
 import {
   NODE_COLORS,
   NODE_COLOR_CLASSES,
+  NODE_LABEL_ALIGNS,
   NODE_SHAPES,
   type MindMapFlowNode,
   type MindMapFlowEdge,
   type MindMapNodeData,
   type NodeColor,
+  type NodeLabelAlign,
   type NodeShape,
 } from "@/types/mind-map";
 
@@ -39,6 +44,18 @@ const SHAPE_LABEL: Record<NodeShape, string> = {
   diamond: "마름모",
   hexagon: "육각형",
   sticky: "포스트잇",
+};
+
+const ALIGN_ICON: Record<NodeLabelAlign, React.ComponentType<{ className?: string }>> = {
+  left: AlignLeft,
+  center: AlignCenter,
+  right: AlignRight,
+};
+
+const ALIGN_LABEL: Record<NodeLabelAlign, string> = {
+  left: "왼쪽 정렬",
+  center: "가운데 정렬",
+  right: "오른쪽 정렬",
 };
 
 // lucide에 SquareRounded가 없어 직접 SVG로 그린 작은 아이콘.
@@ -81,6 +98,10 @@ export function MindMapNodeToolbar({
 
   function setShape(shape: NodeShape) {
     updateNodeData(nodeId, { shape });
+  }
+
+  function setAlign(labelAlign: NodeLabelAlign) {
+    updateNodeData(nodeId, { labelAlign });
   }
 
   function setEmoji(emoji: string) {
@@ -156,7 +177,7 @@ export function MindMapNodeToolbar({
         </button>
       </div>
 
-      {/* 2행: 도형 selector */}
+      {/* 2행: 도형 selector + 정렬 */}
       <div className="flex items-center gap-0.5 px-1.5 py-1">
         {NODE_SHAPES.map((s) => {
           const Icon = SHAPE_ICON[s];
@@ -168,6 +189,23 @@ export function MindMapNodeToolbar({
               aria-pressed={currentShape === s}
               onClick={() => setShape(s)}
               title={SHAPE_LABEL[s]}
+              className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground aria-pressed:bg-primary/15 aria-pressed:text-foreground"
+            >
+              <Icon className="size-4" />
+            </button>
+          );
+        })}
+        <div className="mx-1 h-5 w-px bg-border" />
+        {NODE_LABEL_ALIGNS.map((a) => {
+          const Icon = ALIGN_ICON[a];
+          return (
+            <button
+              key={a}
+              type="button"
+              aria-label={ALIGN_LABEL[a]}
+              aria-pressed={(data.labelAlign ?? "left") === a}
+              onClick={() => setAlign(a)}
+              title={ALIGN_LABEL[a]}
               className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground aria-pressed:bg-primary/15 aria-pressed:text-foreground"
             >
               <Icon className="size-4" />
