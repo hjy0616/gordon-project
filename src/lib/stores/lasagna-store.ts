@@ -15,6 +15,23 @@ import { syncToServer } from "@/lib/api-sync";
 
 const API = "/api/lasagna/simulations";
 
+// 신규 sim의 POST 응답을 같은 id의 PUT/DELETE가 await할 수 있게 보관.
+// fire-and-forget POST 직후 사용자 입력으로 발사되는 PUT이 server row보다 먼저 도착해
+// updateMany 0-row → "[sync] PUT ... updated 0 rows" 경고가 뜨던 race를 막는다.
+// .finally로 항상 정리되며, POST 실패 시에도 Map에서 제거된다 (그 경우 후속 PUT은
+// 그대로 발사되어 진짜 mismatch 신호로 0-row warn이 다시 뜬다 — 의도된 동작).
+const pendingCreates = new Map<string, Promise<Response | null>>();
+
+async function syncMutation(
+  id: string,
+  body: unknown,
+  method: "PUT" | "DELETE",
+): Promise<Response | null> {
+  const pending = pendingCreates.get(id);
+  if (pending) await pending;
+  return syncToServer(API, method, body);
+}
+
 function updateSim(
   simulations: Simulation[],
   simId: string,
@@ -73,7 +90,9 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
           panelMode: "list",
           mainView: "stepper",
         }));
-        syncToServer(API, "POST", sim);
+        const post = syncToServer(API, "POST", sim);
+        pendingCreates.set(sim.id, post);
+        post.finally(() => pendingCreates.delete(sim.id));
       },
 
       deleteSimulation: (id) => {
@@ -84,7 +103,7 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
               ? null
               : state.selectedSimulationId,
         }));
-        syncToServer(API, "DELETE", { id });
+        syncMutation(id, { id }, "DELETE");
       },
 
       selectSimulation: (id) =>
@@ -100,7 +119,7 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
           })),
         }));
         const sim = get().simulations.find((s) => s.id === simId);
-        if (sim) syncToServer(API, "PUT", { id: simId, steps: sim.steps });
+        if (sim) syncMutation(simId, { id: simId, steps: sim.steps }, "PUT");
       },
 
       advanceStep: (simId) => {
@@ -118,11 +137,15 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
         }));
         const sim = get().simulations.find((s) => s.id === simId);
         if (sim)
-          syncToServer(API, "PUT", {
-            id: simId,
-            currentStep: sim.currentStep,
-            steps: sim.steps,
-          });
+          syncMutation(
+            simId,
+            {
+              id: simId,
+              currentStep: sim.currentStep,
+              steps: sim.steps,
+            },
+            "PUT",
+          );
       },
 
       goToStep: (simId, stepNum) => {
@@ -131,7 +154,7 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
             currentStep: stepNum,
           })),
         }));
-        syncToServer(API, "PUT", { id: simId, currentStep: stepNum });
+        syncMutation(simId, { id: simId, currentStep: stepNum }, "PUT");
       },
 
       updateCrowdAnalysis: (simId, data) => {
@@ -142,10 +165,14 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
         }));
         const sim = get().simulations.find((s) => s.id === simId);
         if (sim)
-          syncToServer(API, "PUT", {
-            id: simId,
-            crowdAnalysis: sim.crowdAnalysis,
-          });
+          syncMutation(
+            simId,
+            {
+              id: simId,
+              crowdAnalysis: sim.crowdAnalysis,
+            },
+            "PUT",
+          );
       },
 
       updateMyAnalysis: (simId, data) => {
@@ -156,7 +183,7 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
         }));
         const sim = get().simulations.find((s) => s.id === simId);
         if (sim)
-          syncToServer(API, "PUT", { id: simId, myAnalysis: sim.myAnalysis });
+          syncMutation(simId, { id: simId, myAnalysis: sim.myAnalysis }, "PUT");
       },
 
       updateFlowNodes: (simId, nodes) => {
@@ -165,7 +192,7 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
             flowNodes: nodes,
           })),
         }));
-        syncToServer(API, "PUT", { id: simId, flowNodes: nodes });
+        syncMutation(simId, { id: simId, flowNodes: nodes }, "PUT");
       },
 
       updateFlowEdges: (simId, edges) => {
@@ -174,7 +201,7 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
             flowEdges: edges,
           })),
         }));
-        syncToServer(API, "PUT", { id: simId, flowEdges: edges });
+        syncMutation(simId, { id: simId, flowEdges: edges }, "PUT");
       },
 
       completeSimulation: (simId) => {
@@ -184,7 +211,7 @@ export const useLasagnaStore = create<LasagnaState & LasagnaActions>()(
           })),
           mainView: "summary" as MainView,
         }));
-        syncToServer(API, "PUT", { id: simId, status: "completed" });
+        syncMutation(simId, { id: simId, status: "completed" }, "PUT");
       },
 
       setPanelMode: (mode) => set({ panelMode: mode }),
