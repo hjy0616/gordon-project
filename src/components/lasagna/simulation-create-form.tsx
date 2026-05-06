@@ -63,32 +63,32 @@ export function SimulationCreateForm() {
         </label>
         <div className="flex flex-wrap gap-1.5">
           {allEvents.map((evt) => (
-            <span key={evt.key} className="inline-flex items-center">
+            <span
+              key={evt.key}
+              className={cn(
+                "inline-flex items-center rounded-full border text-xs transition-colors",
+                eventType === evt.key
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border text-muted-foreground hover:border-primary/40",
+              )}
+            >
               <button
                 type="button"
                 onClick={() => setEventType(evt.key)}
-                className={cn(
-                  "rounded-full border px-3 py-1 text-xs transition-colors",
-                  eventType === evt.key
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border text-muted-foreground hover:border-primary/40",
-                  evt.custom && "pr-1.5",
-                )}
+                className={cn("px-3 py-1", evt.custom && "pr-1.5")}
               >
                 {evt.label}
-                {evt.custom && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeCustomEvent(evt.label);
-                    }}
-                    className="ml-1.5 inline-flex rounded-full p-0.5 hover:bg-primary-foreground/20"
-                  >
-                    <X className="size-2.5" />
-                  </button>
-                )}
               </button>
+              {evt.custom && (
+                <button
+                  type="button"
+                  onClick={() => removeCustomEvent(evt.label)}
+                  className="mr-1.5 inline-flex rounded-full p-0.5 hover:bg-primary-foreground/20"
+                  aria-label={`${evt.label} 제거`}
+                >
+                  <X className="size-2.5" />
+                </button>
+              )}
             </span>
           ))}
         </div>
