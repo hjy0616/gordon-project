@@ -32,6 +32,12 @@ async function syncMutation(
   return syncToServer(API, method, body);
 }
 
+// hydrate가 서버 응답으로 local을 덮어쓸 때, 아직 POST가 끝나지 않은 신규 sim은
+// 서버가 모르므로 보존하기 위해 노출.
+export function hasPendingCreate(id: string): boolean {
+  return pendingCreates.has(id);
+}
+
 function updateSim(
   simulations: Simulation[],
   simId: string,
