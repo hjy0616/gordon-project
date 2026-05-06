@@ -14,6 +14,7 @@ import {
   type MindMapFlowNode,
   type MindMapFlowEdge,
   type MindMapNodeData,
+  type NodeLabelAlign,
   type NodeShape,
 } from "@/types/mind-map";
 import { NodeQuickAdd } from "./node-quick-add";
@@ -110,6 +111,13 @@ export function MindMapNode({
   // 도형 크기 변화에 따른 폰트 자동 스케일 — 라벨/메모/이모지 모두 비례 축소·확대.
   const fontMetrics = computeNodeFontMetrics(shape, w, h);
 
+  // labelAlign 미설정 시 "left" fallback — 레거시 데이터 시각 회귀 방지.
+  const align: NodeLabelAlign = data.labelAlign ?? "left";
+  const justifyClass =
+    align === "center" ? "justify-center"
+    : align === "right" ? "justify-end"
+    : "justify-start";
+
   // sticky는 자체 노란 배경. 다른 도형은 NODE_COLOR_CLASSES.bg 사용.
   const bgClass = shape === "sticky" ? STICKY_BG : colorClasses.bg;
 
@@ -183,28 +191,33 @@ export function MindMapNode({
         <div
           className={`relative z-10 flex h-full w-full flex-col justify-center ${visual.contentPad}`}
         >
-          <div className="flex items-start gap-2">
-            {data.emoji ? (
-              <span
-                className="shrink-0 select-none"
+          {/* outer: 가용 폭 점유, inner를 좌/중/우로 정렬 */}
+          <div className={`flex w-full ${justifyClass}`}>
+            {/* inner: 컨텐츠 폭(emoji+label)으로 자라되 max-w-full로 부모 폭 cap, min-w-0로 자식 wrap 허용 */}
+            <div className="inline-flex max-w-full min-w-0 items-start gap-2">
+              {data.emoji ? (
+                <span
+                  className="shrink-0 select-none"
+                  style={{
+                    fontSize: `${fontMetrics.emojiPx}px`,
+                    lineHeight: `${fontMetrics.labelLineHeight}px`,
+                  }}
+                >
+                  {data.emoji}
+                </span>
+              ) : null}
+              <EditableLabel
+                value={data.label}
+                onChange={handleLabelChange}
+                readonly={readonly}
+                align={align}
+                className="min-w-0 break-words font-medium text-foreground"
                 style={{
-                  fontSize: `${fontMetrics.emojiPx}px`,
+                  fontSize: `${fontMetrics.labelPx}px`,
                   lineHeight: `${fontMetrics.labelLineHeight}px`,
                 }}
-              >
-                {data.emoji}
-              </span>
-            ) : null}
-            <EditableLabel
-              value={data.label}
-              onChange={handleLabelChange}
-              readonly={readonly}
-              className="flex-1 break-words text-left font-medium text-foreground"
-              style={{
-                fontSize: `${fontMetrics.labelPx}px`,
-                lineHeight: `${fontMetrics.labelLineHeight}px`,
-              }}
-            />
+              />
+            </div>
           </div>
           {data.memo !== undefined ? (
             <div className="mt-1.5">
