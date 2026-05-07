@@ -19,7 +19,6 @@ import {
 const STATUS_MESSAGES: Record<string, string> = {
   PENDING:
     "관리자 승인 대기 중입니다. 승인이 완료되면 로그인할 수 있습니다.",
-  EXPIRED: "이용 기간이 만료되었습니다. 관리자에게 문의하세요.",
   SUSPENDED: "계정이 정지되었습니다. 관리자에게 문의하세요.",
 };
 const GENERIC_ERROR = "이메일 또는 비밀번호가 올바르지 않습니다.";
