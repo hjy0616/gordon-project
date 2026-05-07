@@ -34,13 +34,18 @@ export async function GET() {
   const daysRemaining = activeUntil
     ? Math.ceil((activeUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     : null;
+
+  // EXPIRED는 window 무관 언제든 제출 가능. ACTIVE는 7일 grace window 유지. 그 외는 차단.
   const canSubmit =
-    dbUser.status === "ACTIVE" &&
-    daysRemaining !== null &&
-    daysRemaining <= RENEWAL_WINDOW_DAYS &&
-    daysRemaining > 0;
+    dbUser.status === "EXPIRED"
+      ? true
+      : dbUser.status === "ACTIVE" &&
+        daysRemaining !== null &&
+        daysRemaining <= RENEWAL_WINDOW_DAYS &&
+        daysRemaining > 0;
 
   return NextResponse.json({
+    status: dbUser.status,
     canSubmit,
     daysRemaining,
     hasSubmitted: !!dbUser.renewalImage,
@@ -61,30 +66,38 @@ export async function POST(req: Request) {
     select: { activeUntil: true, status: true },
   });
 
-  if (!dbUser || dbUser.status !== "ACTIVE") {
+  if (!dbUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // ACTIVE 또는 EXPIRED만 self-service 갱신 허용. PENDING/SUSPENDED는 차단.
+  if (dbUser.status !== "ACTIVE" && dbUser.status !== "EXPIRED") {
     return NextResponse.json(
-      { error: "활성 상태의 사용자만 재인증할 수 있습니다." },
+      { error: "활성 또는 만료 상태의 사용자만 재인증할 수 있습니다." },
       { status: 403 }
     );
   }
 
-  if (!dbUser.activeUntil) {
-    return NextResponse.json(
-      { error: "활성 기간이 설정되지 않았습니다." },
-      { status: 400 }
-    );
-  }
+  // ACTIVE인 경우만 7일 grace window 강제. EXPIRED는 window 무관.
+  if (dbUser.status === "ACTIVE") {
+    if (!dbUser.activeUntil) {
+      return NextResponse.json(
+        { error: "활성 기간이 설정되지 않았습니다." },
+        { status: 400 }
+      );
+    }
 
-  const now = new Date();
-  const daysRemaining = Math.ceil(
-    (dbUser.activeUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  if (daysRemaining > RENEWAL_WINDOW_DAYS) {
-    return NextResponse.json(
-      { error: `종료일 ${RENEWAL_WINDOW_DAYS}일 전부터 재인증할 수 있습니다.` },
-      { status: 400 }
+    const now = new Date();
+    const daysRemaining = Math.ceil(
+      (dbUser.activeUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     );
+
+    if (daysRemaining > RENEWAL_WINDOW_DAYS) {
+      return NextResponse.json(
+        { error: `종료일 ${RENEWAL_WINDOW_DAYS}일 전부터 재인증할 수 있습니다.` },
+        { status: 400 }
+      );
+    }
   }
 
   const formData = await req.formData();
