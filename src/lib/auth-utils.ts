@@ -64,6 +64,12 @@ export async function requireActiveUserOrRedirect() {
 }
 
 export async function requireActiveAdmin() {
+  const user = await requireActiveUser();
+  if (!user || user.role !== "ADMIN") return null;
+  return user;
+}
+
+export async function requireActiveAdminOrRedirect() {
   const user = await requireActiveUserOrRedirect();
   if (user.role !== "ADMIN") return null;
   return user;

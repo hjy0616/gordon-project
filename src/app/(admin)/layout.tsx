@@ -6,14 +6,14 @@ import {
 } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { QueryProvider } from "@/lib/providers/query-provider";
-import { requireActiveAdmin } from "@/lib/auth-utils";
+import { requireActiveAdminOrRedirect } from "@/lib/auth-utils";
 
 export default async function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const admin = await requireActiveAdmin();
+  const admin = await requireActiveAdminOrRedirect();
   if (!admin) {
     redirect("/dashboard");
   }
