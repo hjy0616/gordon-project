@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  formatKRW,
+  formatUSD,
   type PortfolioRow as Row,
 } from "@/lib/finance-portfolio-schema";
 
@@ -85,7 +85,7 @@ export function PortfolioRow({ row, total, onChange, onRemove }: Props) {
         </p>
       )}
       <p className="text-xs text-muted-foreground">
-        금액 {formatKRW(row.amount)}
+        금액 {formatUSD(row.amount)}
       </p>
     </div>
   );

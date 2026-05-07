@@ -31,10 +31,10 @@ export function teamLabel(team: Team): string {
   return team === "BLUE" ? "청팀" : "백팀";
 }
 
-export function formatKRW(amount: number): string {
-  return new Intl.NumberFormat("ko-KR", {
+export function formatUSD(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "KRW",
+    currency: "USD",
     maximumFractionDigits: 0,
   }).format(amount);
 }

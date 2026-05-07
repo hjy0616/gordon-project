@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  formatKRW,
+  formatUSD,
   type PortfolioRow,
 } from "@/lib/finance-portfolio-schema";
 
@@ -47,7 +47,7 @@ export function PortfolioSummary({
             htmlFor="portfolio-total-capital"
             className="text-xs text-muted-foreground"
           >
-            총 자본금 (₩)
+            총 자본금 ($)
           </label>
           <Input
             id="portfolio-total-capital"
@@ -66,7 +66,7 @@ export function PortfolioSummary({
             placeholder="100000000"
           />
           <p className="text-xs text-muted-foreground tabular-nums">
-            {formatKRW(totalCapital)}
+            {formatUSD(totalCapital)}
           </p>
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -92,8 +92,8 @@ export function PortfolioSummary({
             }`}
           >
             {remaining < 0
-              ? `자본금 초과: ${formatKRW(Math.abs(remaining))}`
-              : `미투입: ${formatKRW(remaining)}`}
+              ? `자본금 초과: ${formatUSD(Math.abs(remaining))}`
+              : `미투입: ${formatUSD(remaining)}`}
           </p>
         </div>
       </CardContent>

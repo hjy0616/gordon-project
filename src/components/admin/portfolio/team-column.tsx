@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  formatKRW,
+  formatUSD,
   type PortfolioRow as Row,
   type Team,
   teamLabel,
@@ -50,7 +50,7 @@ export function TeamColumn({
         <CardTitle className="flex items-baseline justify-between">
           <span>{teamLabel(team)}</span>
           <span className="text-sm font-normal text-muted-foreground tabular-nums">
-            {formatKRW(teamSum)} ({teamRatio.toFixed(1)}%)
+            {formatUSD(teamSum)} ({teamRatio.toFixed(1)}%)
           </span>
         </CardTitle>
       </CardHeader>
