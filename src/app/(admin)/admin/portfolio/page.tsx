@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireActiveAdminOrRedirect } from "@/lib/auth-utils";
 import { isPortfolioAllowed } from "@/lib/finance-portfolio-access";
 import { prisma } from "@/lib/prisma";
-import type { PortfolioRow } from "@/lib/finance-portfolio-schema";
+import { unwrapPortfolio } from "@/lib/finance-portfolio-schema";
 import { PortfolioEditor } from "@/components/admin/portfolio/portfolio-editor";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +19,7 @@ export default async function PortfolioPage() {
     where: { userId: user.id },
   });
 
-  const initialRows =
-    (portfolio?.rows as PortfolioRow[] | null | undefined) ?? [];
+  const initial = unwrapPortfolio(portfolio?.rows);
 
   return (
     <div className="mx-auto w-full max-w-5xl">
@@ -30,7 +29,10 @@ export default async function PortfolioPage() {
           청팀 50% / 백팀 50% 배분 관리
         </p>
       </header>
-      <PortfolioEditor initialRows={initialRows} />
+      <PortfolioEditor
+        initialTotalCapital={initial.totalCapital}
+        initialRows={initial.rows}
+      />
     </div>
   );
 }

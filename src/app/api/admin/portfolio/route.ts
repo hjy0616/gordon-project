@@ -4,7 +4,7 @@ import { isPortfolioAllowed } from "@/lib/finance-portfolio-access";
 import { prisma } from "@/lib/prisma";
 import {
   PortfolioPutBody,
-  type PortfolioRow,
+  unwrapPortfolio,
 } from "@/lib/finance-portfolio-schema";
 
 async function checkAccess() {
@@ -36,8 +36,11 @@ export async function GET() {
     where: { userId: access.user.id },
   });
 
+  const data = unwrapPortfolio(portfolio?.rows);
+
   return NextResponse.json({
-    rows: ((portfolio?.rows as PortfolioRow[] | undefined) ?? []),
+    totalCapital: data.totalCapital,
+    rows: data.rows,
     updatedAt: portfolio?.updatedAt?.toISOString() ?? null,
   });
 }
@@ -69,12 +72,15 @@ export async function PUT(req: Request) {
 
   const portfolio = await prisma.financePortfolio.upsert({
     where: { userId: access.user.id },
-    create: { userId: access.user.id, rows: parsed.data.rows },
-    update: { rows: parsed.data.rows },
+    create: { userId: access.user.id, rows: parsed.data },
+    update: { rows: parsed.data },
   });
 
+  const data = unwrapPortfolio(portfolio.rows);
+
   return NextResponse.json({
-    rows: portfolio.rows as PortfolioRow[],
+    totalCapital: data.totalCapital,
+    rows: data.rows,
     updatedAt: portfolio.updatedAt.toISOString(),
   });
 }

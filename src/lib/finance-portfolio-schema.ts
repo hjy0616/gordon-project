@@ -14,10 +14,18 @@ export type PortfolioRow = z.infer<typeof PortfolioRow>;
 
 export const PortfolioRows = z.array(PortfolioRow).max(50);
 
-export const PortfolioPutBody = z.object({
+export const PortfolioData = z.object({
+  totalCapital: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(1_000_000_000_000),
   rows: PortfolioRows,
 });
-export type PortfolioPutBody = z.infer<typeof PortfolioPutBody>;
+export type PortfolioData = z.infer<typeof PortfolioData>;
+
+export const PortfolioPutBody = PortfolioData;
+export type PortfolioPutBody = PortfolioData;
 
 export function teamLabel(team: Team): string {
   return team === "BLUE" ? "청팀" : "백팀";
@@ -29,4 +37,27 @@ export function formatKRW(amount: number): string {
     currency: "KRW",
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+/**
+ * Reads the Json column and normalizes both new shape ({totalCapital, rows})
+ * and the legacy bare-array shape into PortfolioData.
+ */
+export function unwrapPortfolio(rawJson: unknown): PortfolioData {
+  if (!rawJson) return { totalCapital: 0, rows: [] };
+  if (Array.isArray(rawJson)) {
+    return { totalCapital: 0, rows: rawJson as PortfolioRow[] };
+  }
+  if (typeof rawJson === "object") {
+    const obj = rawJson as { totalCapital?: unknown; rows?: unknown };
+    const totalCapital =
+      typeof obj.totalCapital === "number" &&
+      Number.isFinite(obj.totalCapital) &&
+      obj.totalCapital >= 0
+        ? Math.floor(obj.totalCapital)
+        : 0;
+    const rows = Array.isArray(obj.rows) ? (obj.rows as PortfolioRow[]) : [];
+    return { totalCapital, rows };
+  }
+  return { totalCapital: 0, rows: [] };
 }

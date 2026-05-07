@@ -10,24 +10,33 @@ import { TeamColumn } from "./team-column";
 import { SaveBar } from "./save-bar";
 
 interface Props {
+  initialTotalCapital: number;
   initialRows: PortfolioRow[];
 }
 
 const MAX_ROWS = 50;
+const MAX_CAPITAL = 1_000_000_000_000;
 
-export function PortfolioEditor({ initialRows }: Props) {
+export function PortfolioEditor({
+  initialTotalCapital,
+  initialRows,
+}: Props) {
   const [rows, setRows] = useState<PortfolioRow[]>(initialRows);
   const [savedRows, setSavedRows] =
     useState<PortfolioRow[]>(initialRows);
+  const [totalCapital, setTotalCapital] =
+    useState<number>(initialTotalCapital);
+  const [savedTotalCapital, setSavedTotalCapital] =
+    useState<number>(initialTotalCapital);
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const dirty = useMemo(
-    () => JSON.stringify(rows) !== JSON.stringify(savedRows),
-    [rows, savedRows],
+    () =>
+      JSON.stringify(rows) !== JSON.stringify(savedRows) ||
+      totalCapital !== savedTotalCapital,
+    [rows, savedRows, totalCapital, savedTotalCapital],
   );
-
-  const total = rows.reduce((s, r) => s + r.amount, 0);
 
   const invalidCount = rows.reduce((n, r) => {
     let count = 0;
@@ -78,6 +87,14 @@ export function PortfolioEditor({ initialRows }: Props) {
     setRows((rs) => rs.filter((r) => r.id !== id));
   }, []);
 
+  const handleTotalCapitalChange = useCallback((next: number) => {
+    if (!Number.isFinite(next) || next < 0) {
+      setTotalCapital(0);
+      return;
+    }
+    setTotalCapital(Math.min(Math.floor(next), MAX_CAPITAL));
+  }, []);
+
   const handleSave = useCallback(async () => {
     setPending(true);
     setErrorMessage(null);
@@ -85,7 +102,7 @@ export function PortfolioEditor({ initialRows }: Props) {
       const res = await fetch("/api/admin/portfolio", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows }),
+        body: JSON.stringify({ totalCapital, rows }),
       });
       if (!res.ok) {
         let detail = `HTTP ${res.status}`;
@@ -96,24 +113,33 @@ export function PortfolioEditor({ initialRows }: Props) {
         setErrorMessage(`저장 실패: ${detail}`);
         return;
       }
-      const data = (await res.json()) as { rows: PortfolioRow[] };
+      const data = (await res.json()) as {
+        totalCapital: number;
+        rows: PortfolioRow[];
+      };
       setSavedRows(data.rows);
       setRows(data.rows);
+      setSavedTotalCapital(data.totalCapital);
+      setTotalCapital(data.totalCapital);
     } catch {
       setErrorMessage("저장 실패: 네트워크 오류");
     } finally {
       setPending(false);
     }
-  }, [rows]);
+  }, [rows, totalCapital]);
 
   return (
     <div className="space-y-6 pb-24">
-      <PortfolioSummary rows={rows} />
+      <PortfolioSummary
+        rows={rows}
+        totalCapital={totalCapital}
+        onTotalCapitalChange={handleTotalCapitalChange}
+      />
       <div className="grid gap-4 md:grid-cols-2">
         <TeamColumn
           team="BLUE"
           rows={rows}
-          total={total}
+          total={totalCapital}
           onAdd={() => handleAdd("BLUE")}
           onChange={handleChange}
           onRemove={handleRemove}
@@ -122,7 +148,7 @@ export function PortfolioEditor({ initialRows }: Props) {
         <TeamColumn
           team="WHITE"
           rows={rows}
-          total={total}
+          total={totalCapital}
           onAdd={() => handleAdd("WHITE")}
           onChange={handleChange}
           onRemove={handleRemove}
