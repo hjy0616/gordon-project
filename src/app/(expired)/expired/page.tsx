@@ -1,0 +1,117 @@
+import { redirect } from "next/navigation";
+import { AlertTriangle, AlertCircle } from "lucide-react";
+import { auth, signOut } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ExpiredRenewalForm } from "@/components/expired/expired-renewal-form";
+
+export const dynamic = "force-dynamic";
+
+export default async function ExpiredPage() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      name: true,
+      email: true,
+      activeUntil: true,
+      renewalImage: true,
+      renewalSubmittedAt: true,
+      renewalRejectionReason: true,
+      renewalRejectedAt: true,
+    },
+  });
+
+  if (!dbUser) {
+    redirect("/login");
+  }
+
+  const formattedActiveUntil = dbUser.activeUntil
+    ? new Date(dbUser.activeUntil).toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+    : null;
+
+  const formattedRejectedAt = dbUser.renewalRejectedAt
+    ? new Date(dbUser.renewalRejectedAt).toLocaleString("ko-KR")
+    : null;
+
+  return (
+    <Card className="w-full max-w-md">
+      <CardHeader className="space-y-2">
+        <div className="flex items-center gap-2 text-orange-500">
+          <AlertTriangle className="size-5" />
+          <CardTitle className="text-xl font-bold tracking-tight">
+            이용 기간이 만료되었습니다
+          </CardTitle>
+        </div>
+        <CardDescription>
+          {formattedActiveUntil
+            ? `${formattedActiveUntil} 만료 — 재인증 이미지를 제출하면 관리자 검토 후 이용을 재개할 수 있습니다.`
+            : "재인증 이미지를 제출하면 관리자 검토 후 이용을 재개할 수 있습니다."}
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {dbUser.renewalRejectionReason ? (
+          <div className="flex items-start gap-2 rounded-md border border-orange-500/30 bg-orange-500/5 p-3">
+            <AlertCircle className="mt-0.5 size-4 shrink-0 text-orange-500" />
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-orange-700 dark:text-orange-300">
+                재인증 거부 사유
+              </p>
+              <p className="text-xs leading-snug text-orange-700 break-words dark:text-orange-300">
+                {dbUser.renewalRejectionReason}
+              </p>
+              {formattedRejectedAt ? (
+                <p className="text-[10px] text-muted-foreground">
+                  {formattedRejectedAt}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        <ExpiredRenewalForm
+          initialStatus={{
+            hasSubmitted: !!dbUser.renewalImage,
+            submittedAt: dbUser.renewalSubmittedAt
+              ? dbUser.renewalSubmittedAt.toISOString()
+              : null,
+          }}
+        />
+      </CardContent>
+
+      <CardFooter className="flex flex-col gap-2 border-t pt-4">
+        <p className="text-xs text-muted-foreground">
+          로그인 사용자: {dbUser.name || dbUser.email}
+        </p>
+        <form
+          action={async () => {
+            "use server";
+            await signOut({ redirectTo: "/login" });
+          }}
+          className="w-full"
+        >
+          <Button type="submit" variant="outline" className="w-full">
+            로그아웃
+          </Button>
+        </form>
+      </CardFooter>
+    </Card>
+  );
+}
