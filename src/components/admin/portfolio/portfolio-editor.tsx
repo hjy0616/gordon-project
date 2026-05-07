@@ -92,7 +92,8 @@ export function PortfolioEditor({
       setTotalCapital(0);
       return;
     }
-    setTotalCapital(Math.min(Math.floor(next), MAX_CAPITAL));
+    const rounded = Math.round(next * 100) / 100;
+    setTotalCapital(Math.min(rounded, MAX_CAPITAL));
   }, []);
 
   const handleSave = useCallback(async () => {

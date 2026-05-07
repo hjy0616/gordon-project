@@ -7,7 +7,7 @@ export const PortfolioRow = z.object({
   id: z.string().min(1).max(64),
   team: Team,
   name: z.string().trim().min(1).max(100),
-  amount: z.number().int().nonnegative().max(1_000_000_000_000),
+  amount: z.number().nonnegative().max(1_000_000_000_000),
   memo: z.string().max(200).default(""),
 });
 export type PortfolioRow = z.infer<typeof PortfolioRow>;
@@ -15,11 +15,7 @@ export type PortfolioRow = z.infer<typeof PortfolioRow>;
 export const PortfolioRows = z.array(PortfolioRow).max(50);
 
 export const PortfolioData = z.object({
-  totalCapital: z
-    .number()
-    .int()
-    .nonnegative()
-    .max(1_000_000_000_000),
+  totalCapital: z.number().nonnegative().max(1_000_000_000_000),
   rows: PortfolioRows,
 });
 export type PortfolioData = z.infer<typeof PortfolioData>;
@@ -35,7 +31,8 @@ export function formatUSD(amount: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount);
 }
 
@@ -54,7 +51,7 @@ export function unwrapPortfolio(rawJson: unknown): PortfolioData {
       typeof obj.totalCapital === "number" &&
       Number.isFinite(obj.totalCapital) &&
       obj.totalCapital >= 0
-        ? Math.floor(obj.totalCapital)
+        ? Math.round(obj.totalCapital * 100) / 100
         : 0;
     const rows = Array.isArray(obj.rows) ? (obj.rows as PortfolioRow[]) : [];
     return { totalCapital, rows };

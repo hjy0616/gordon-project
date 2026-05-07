@@ -52,18 +52,20 @@ export function PortfolioSummary({
           <Input
             id="portfolio-total-capital"
             type="number"
-            inputMode="numeric"
+            inputMode="decimal"
             min={0}
-            step={1}
+            step={0.01}
             value={totalCapital}
             onChange={(e) => {
               const n = Number(e.target.value);
               onTotalCapitalChange(
-                Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0,
+                Number.isFinite(n) && n >= 0
+                  ? Math.round(n * 100) / 100
+                  : 0,
               );
             }}
             className="text-xl font-semibold tabular-nums"
-            placeholder="100000000"
+            placeholder="100000.00"
           />
           <p className="text-xs text-muted-foreground tabular-nums">
             {formatUSD(totalCapital)}

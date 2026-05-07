@@ -37,15 +37,17 @@ export function PortfolioRow({ row, total, onChange, onRemove }: Props) {
       <div className="flex items-center gap-2">
         <Input
           type="number"
-          inputMode="numeric"
+          inputMode="decimal"
           min={0}
-          step={1}
+          step={0.01}
           value={row.amount}
           onChange={(e) => {
             const n = Number(e.target.value);
             onChange({
               amount:
-                Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0,
+                Number.isFinite(n) && n >= 0
+                  ? Math.round(n * 100) / 100
+                  : 0,
             });
           }}
           className="flex-1 tabular-nums"
