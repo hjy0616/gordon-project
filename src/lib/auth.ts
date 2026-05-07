@@ -39,11 +39,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        // Status checks — sign-in is gated to ACTIVE only.
-        // Pending/suspended/expired are surfaced to the user via
-        // /api/auth/login-precheck so we don't need to leak the reason here.
-        if (user.status !== "ACTIVE") {
+        // PENDING/SUSPENDED는 self-service 대상 아님 — 로그인 차단 유지.
+        // EXPIRED는 부분 세션을 발급해 /expired 페이지에서 재인증 흐름을 탄다.
+        if (user.status === "PENDING" || user.status === "SUSPENDED") {
           return null;
+        }
+        if (user.status === "EXPIRED") {
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            role: user.role,
+            status: user.status,
+            activeUntil: user.activeUntil?.toISOString() ?? null,
+          };
         }
 
         // ADMIN exempt — 운영자는 멤버십 만료 적용 안 함
@@ -74,7 +84,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return true;
           });
 
-          if (expired) return null;
+          if (expired) {
+            // 부분 세션 발급 — /expired 페이지로 redirect되게 한다.
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              image: user.image,
+              role: user.role,
+              status: "EXPIRED",
+              activeUntil: user.activeUntil?.toISOString() ?? null,
+            };
+          }
 
           // race: read 이후 어드민이 갱신/재활성화함. fresh 한 번 더 읽고 진실 결정.
           const fresh = await prisma.user.findUnique({
