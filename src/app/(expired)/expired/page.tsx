@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { AlertTriangle, AlertCircle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
@@ -46,10 +46,6 @@ export default async function ExpiredPage() {
       })
     : null;
 
-  const formattedRejectedAt = dbUser.renewalRejectedAt
-    ? new Date(dbUser.renewalRejectedAt).toLocaleString("ko-KR")
-    : null;
-
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="space-y-2">
@@ -67,30 +63,15 @@ export default async function ExpiredPage() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {dbUser.renewalRejectionReason ? (
-          <div className="flex items-start gap-2 rounded-md border border-orange-500/30 bg-orange-500/5 p-3">
-            <AlertCircle className="mt-0.5 size-4 shrink-0 text-orange-500" />
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-orange-700 dark:text-orange-300">
-                재인증 거부 사유
-              </p>
-              <p className="text-xs leading-snug text-orange-700 break-words dark:text-orange-300">
-                {dbUser.renewalRejectionReason}
-              </p>
-              {formattedRejectedAt ? (
-                <p className="text-[10px] text-muted-foreground">
-                  {formattedRejectedAt}
-                </p>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-
         <ExpiredRenewalForm
           initialStatus={{
             hasSubmitted: !!dbUser.renewalImage,
             submittedAt: dbUser.renewalSubmittedAt
               ? dbUser.renewalSubmittedAt.toISOString()
+              : null,
+            rejectionReason: dbUser.renewalRejectionReason,
+            rejectedAt: dbUser.renewalRejectedAt
+              ? dbUser.renewalRejectedAt.toISOString()
               : null,
           }}
         />

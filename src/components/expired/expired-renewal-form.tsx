@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle, Upload, X } from "lucide-react";
+import { AlertCircle, CheckCircle, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -10,6 +10,8 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 interface InitialStatus {
   hasSubmitted: boolean;
   submittedAt: string | null;
+  rejectionReason: string | null;
+  rejectedAt: string | null;
 }
 
 export function ExpiredRenewalForm({
@@ -19,6 +21,8 @@ export function ExpiredRenewalForm({
 }) {
   const [hasSubmitted, setHasSubmitted] = useState(initialStatus.hasSubmitted);
   const [submittedAt, setSubmittedAt] = useState(initialStatus.submittedAt);
+  const [rejectionReason, setRejectionReason] = useState(initialStatus.rejectionReason);
+  const [rejectedAt, setRejectedAt] = useState(initialStatus.rejectedAt);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -76,6 +80,8 @@ export function ExpiredRenewalForm({
 
     setHasSubmitted(true);
     setSubmittedAt(new Date().toISOString());
+    setRejectionReason(null);
+    setRejectedAt(null);
     handleClear();
     setUploading(false);
   };
@@ -95,7 +101,7 @@ export function ExpiredRenewalForm({
                 : "재인증 이미지가 제출되었습니다."}
             </p>
             <p className="text-xs text-muted-foreground">
-              승인되면 자동으로 대시보드로 이동합니다. 새 이미지를 다시 올리려면
+              승인 후 페이지를 새로고침하면 대시보드로 이동합니다. 새 이미지를 다시 올리려면
               아래 버튼을 누르세요.
             </p>
           </div>
@@ -117,6 +123,25 @@ export function ExpiredRenewalForm({
 
   return (
     <div className="space-y-3">
+      {rejectionReason ? (
+        <div className="flex items-start gap-2 rounded-md border border-orange-500/30 bg-orange-500/5 p-3">
+          <AlertCircle className="mt-0.5 size-4 shrink-0 text-orange-500" />
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-orange-700 dark:text-orange-300">
+              재인증 거부 사유
+            </p>
+            <p className="text-xs leading-snug text-orange-700 break-words dark:text-orange-300">
+              {rejectionReason}
+            </p>
+            {rejectedAt ? (
+              <p className="text-[10px] text-muted-foreground">
+                {new Date(rejectedAt).toLocaleString("ko-KR")}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       {error && <p className="text-xs text-destructive">{error}</p>}
 
       {imagePreview ? (
