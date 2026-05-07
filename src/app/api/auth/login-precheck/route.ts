@@ -40,12 +40,9 @@ export async function POST(req: Request) {
   if (user.status === "SUSPENDED") {
     return NextResponse.json<{ code: PrecheckCode }>({ code: "SUSPENDED" });
   }
-  if (user.status === "EXPIRED") {
-    return NextResponse.json<{ code: PrecheckCode }>({ code: "EXPIRED" });
-  }
-
   if (
     user.role !== "ADMIN" &&
+    user.status === "ACTIVE" &&
     user.activeUntil &&
     user.activeUntil.getTime() < Date.now()
   ) {
@@ -72,7 +69,8 @@ export async function POST(req: Request) {
     });
 
     if (expired) {
-      return NextResponse.json<{ code: PrecheckCode }>({ code: "EXPIRED" });
+      // 자동 만료 처리 후 OK로 통과 — /expired 페이지로 redirect 흐름을 후속 layout이 책임.
+      return NextResponse.json<{ code: PrecheckCode }>({ code: "OK" });
     }
 
     // race: 동시에 어드민이 갱신함. fresh 재검증 후 분기.
@@ -90,14 +88,15 @@ export async function POST(req: Request) {
       return NextResponse.json<{ code: PrecheckCode }>({ code: "SUSPENDED" });
     }
     if (fresh.status === "EXPIRED") {
-      return NextResponse.json<{ code: PrecheckCode }>({ code: "EXPIRED" });
+      return NextResponse.json<{ code: PrecheckCode }>({ code: "OK" });
     }
     if (
       fresh.role !== "ADMIN" &&
       fresh.activeUntil &&
       fresh.activeUntil.getTime() < Date.now()
     ) {
-      return NextResponse.json<{ code: PrecheckCode }>({ code: "EXPIRED" });
+      // race: read 시점은 ACTIVE인데 activeUntil은 이미 과거. authorize가 자동 만료 + 부분 세션 발급한다.
+      return NextResponse.json<{ code: PrecheckCode }>({ code: "OK" });
     }
     // race로 갱신된 ACTIVE 사용자 — OK로 통과
   }
