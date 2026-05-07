@@ -1,10 +1,8 @@
-import { redirect } from "next/navigation";
-
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { HeartbeatMount } from "@/components/heartbeat-mount";
 import { QueryProvider } from "@/lib/providers/query-provider";
-import { requireActiveUser } from "@/lib/auth-utils";
+import { requireActiveUserOrRedirect } from "@/lib/auth-utils";
 import { getSignedImageUrl } from "@/lib/s3";
 
 export default async function AppLayout({
@@ -12,10 +10,7 @@ export default async function AppLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const user = await requireActiveUser();
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireActiveUserOrRedirect();
 
   const avatarUrl = user.image ? await getSignedImageUrl(user.image) : null;
 
