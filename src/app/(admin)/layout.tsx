@@ -7,6 +7,7 @@ import {
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { requireActiveAdminOrRedirect } from "@/lib/auth-utils";
+import { isPortfolioAllowed } from "@/lib/finance-portfolio-access";
 
 export default async function AdminLayout({
   children,
@@ -18,10 +19,12 @@ export default async function AdminLayout({
     redirect("/dashboard");
   }
 
+  const showPortfolio = isPortfolioAllowed(admin.id);
+
   return (
     <QueryProvider>
       <SidebarProvider>
-        <AdminSidebar />
+        <AdminSidebar showPortfolio={showPortfolio} />
         <SidebarInset>
           <header className="flex h-12 items-center gap-2 px-4">
             <SidebarTrigger />

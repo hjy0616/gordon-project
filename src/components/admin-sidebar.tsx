@@ -18,6 +18,8 @@ import {
   Sun,
   UserCheck,
   Users,
+  Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -48,21 +50,18 @@ interface AdminCounts {
   renewal: number;
 }
 
-const navItems = [
+interface NavItem {
+  title: string;
+  href: string;
+  icon: LucideIcon;
+  badgeKey: "pending" | "renewal" | null;
+}
+
+const baseNavItems: NavItem[] = [
   { title: "대시보드", href: "/admin", icon: LayoutDashboard, badgeKey: null },
   { title: "분석", href: "/admin/analytics", icon: BarChart3, badgeKey: null },
-  {
-    title: "승인 대기",
-    href: "/admin/approvals",
-    icon: UserCheck,
-    badgeKey: "pending" as const,
-  },
-  {
-    title: "재인증",
-    href: "/admin/renewals",
-    icon: FileCheck,
-    badgeKey: "renewal" as const,
-  },
+  { title: "승인 대기", href: "/admin/approvals", icon: UserCheck, badgeKey: "pending" },
+  { title: "재인증", href: "/admin/renewals", icon: FileCheck, badgeKey: "renewal" },
   { title: "사용자 관리", href: "/admin/users", icon: Users, badgeKey: null },
   { title: "게시판 관리", href: "/admin/boards", icon: MessageSquare, badgeKey: null },
 ];
@@ -132,9 +131,25 @@ function NavUser() {
   );
 }
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  showPortfolio?: boolean;
+}
+
+export function AdminSidebar({ showPortfolio = false }: AdminSidebarProps) {
   const pathname = usePathname();
   const [counts, setCounts] = useState<AdminCounts>({ pending: 0, renewal: 0 });
+
+  const navItems: NavItem[] = showPortfolio
+    ? [
+        ...baseNavItems,
+        {
+          title: "포트폴리오",
+          href: "/admin/portfolio",
+          icon: Wallet,
+          badgeKey: null,
+        },
+      ]
+    : baseNavItems;
 
   useEffect(() => {
     let active = true;
