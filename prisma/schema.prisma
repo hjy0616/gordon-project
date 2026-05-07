@@ -92,6 +92,7 @@ model User {
   userSessions       UserSession[]
   userEvents         UserEvent[]
   userStatusLogs     UserStatusLog[]
+  financePortfolio   FinancePortfolio?
 
   @@map("users")
 }
@@ -519,4 +520,19 @@ model Kpi {
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
   @@map("kpis")
+}
+
+// ══════════════════════════════════════════════════════════
+// FINANCE PORTFOLIO (개인 투자 포트폴리오)
+// ══════════════════════════════════════════════════════════
+
+model FinancePortfolio {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  rows      Json     @default("[]")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("finance_portfolios")
 }
