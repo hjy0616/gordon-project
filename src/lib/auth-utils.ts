@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { redirect } from "next/navigation";
 import { auth } from "./auth";
 import { prisma } from "./prisma";
 
@@ -47,8 +48,23 @@ export const requireActiveUser = cache(async () => {
   };
 });
 
-export async function requireActiveAdmin() {
+export async function requireActiveUserOrRedirect() {
   const user = await requireActiveUser();
-  if (!user || user.role !== "ADMIN") return null;
+  if (user) return user;
+
+  const session = await auth();
+  if (session?.user?.id) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { status: true },
+    });
+    if (dbUser?.status === "EXPIRED") redirect("/expired");
+  }
+  redirect("/login");
+}
+
+export async function requireActiveAdmin() {
+  const user = await requireActiveUserOrRedirect();
+  if (user.role !== "ADMIN") return null;
   return user;
 }
