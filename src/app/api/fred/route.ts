@@ -32,19 +32,39 @@ function makeNullIndicator(id: string, name: string): FredIndicator {
   return { id, name, value: null, change: null, date: null };
 }
 
-async function fetchSeries(
+async function fetchSeriesOnce(
   id: string,
-  name: string,
   apiKey: string,
-): Promise<FredIndicator> {
+): Promise<FredApiResponse | null | "retry"> {
   const url =
     `https://api.stlouisfed.org/fred/series/observations` +
     `?series_id=${id}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=2`;
 
   const res = await fetch(url, { cache: "no-store" }).catch(() => null);
-  if (!res || !res.ok) return makeNullIndicator(id, name);
+  if (!res) return "retry";
+  // FRED returns 5xx under load — retry. 4xx is usually a bad series id, don't retry.
+  if (res.status >= 500) return "retry";
+  if (!res.ok) return null;
 
-  const json: FredApiResponse = await res.json().catch(() => null);
+  const json: FredApiResponse | null = await res.json().catch(() => null);
+  return json;
+}
+
+async function fetchSeries(
+  id: string,
+  name: string,
+  apiKey: string,
+): Promise<FredIndicator> {
+  let json: FredApiResponse | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const result = await fetchSeriesOnce(id, apiKey);
+    if (result !== "retry") {
+      json = result;
+      break;
+    }
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+  }
+
   if (!json) return makeNullIndicator(id, name);
 
   const obs = json.observations ?? [];
@@ -80,21 +100,33 @@ export async function GET() {
     );
   }
 
-  const results = await Promise.allSettled(
-    FRED_SERIES.map((s) => fetchSeries(s.id, s.name, apiKey)),
-  );
-
-  const data: FredIndicator[] = results.map((r, i) =>
-    r.status === "fulfilled" ? r.value : makeNullIndicator(FRED_SERIES[i].id, FRED_SERIES[i].name),
-  );
+  // Limit concurrency to avoid FRED 5xx under load.
+  const CONCURRENCY = 4;
+  const data: FredIndicator[] = new Array(FRED_SERIES.length);
+  for (let i = 0; i < FRED_SERIES.length; i += CONCURRENCY) {
+    const chunk = FRED_SERIES.slice(i, i + CONCURRENCY);
+    const settled = await Promise.allSettled(
+      chunk.map((s) => fetchSeries(s.id, s.name, apiKey)),
+    );
+    settled.forEach((r, j) => {
+      const idx = i + j;
+      data[idx] =
+        r.status === "fulfilled"
+          ? r.value
+          : makeNullIndicator(FRED_SERIES[idx].id, FRED_SERIES[idx].name);
+    });
+  }
 
   const hasAnyData = data.some((d) => d.value !== null);
+  const hasAllData = data.every((d) => d.value !== null);
 
   return NextResponse.json(
     { data, updatedAt: new Date().toISOString(), source: hasAnyData ? "fred" : "error" },
     {
       headers: {
-        "Cache-Control": hasAnyData
+        // Only long-cache a fully-successful response. Partial failures get a short cache
+        // so transient FRED 5xx errors don't stick on screen for an hour.
+        "Cache-Control": hasAllData
           ? "s-maxage=3600, stale-while-revalidate=300"
           : "s-maxage=60, stale-while-revalidate=30",
       },
