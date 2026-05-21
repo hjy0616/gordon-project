@@ -203,6 +203,8 @@ export function FinancialIndicatorsSection() {
         type="button"
         onClick={() => setDialogOpen(true)}
         aria-label="Yahoo & FRED 지표 차트 보기"
+        aria-haspopup="dialog"
+        aria-expanded={dialogOpen}
         className="block w-full cursor-pointer rounded-xl border border-border bg-card p-5 text-left transition-shadow hover:ring-1 hover:ring-primary/30 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
       >
         {/* Header */}
