@@ -111,6 +111,7 @@ export function FinancialIndicatorsSection() {
   const vix = yahooData.find((d) => d.symbol === "^VIX");
   const us2y = yahooData.find((d) => d.symbol === "2YY=F");
   const us10y = yahooData.find((d) => d.symbol === "^TNX");
+  const us30y = yahooData.find((d) => d.symbol === "^TYX");
 
   // ── FRED indicators ──
   const fredData = fredResp?.data ?? [];
@@ -210,6 +211,7 @@ export function FinancialIndicatorsSection() {
           {yahooRow("DXY (ICE)", dxy, "index")}
           {yahooRow("US 2Y", us2y, "percent")}
           {yahooRow("US 10Y", us10y, "percent")}
+          {yahooRow("US 30Y", us30y, "percent")}
           {fredRow("Stress Idx", stressIdx, "index")}
           {fredRow("M2 Supply", m2Supply)}
         </div>

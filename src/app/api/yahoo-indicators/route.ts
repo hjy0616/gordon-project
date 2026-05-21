@@ -4,6 +4,7 @@ const YAHOO_INDICATORS = [
   { name: "VIX", symbol: "^VIX" },
   { name: "US 2Y", symbol: "2YY=F" },
   { name: "US 10Y", symbol: "^TNX" },
+  { name: "US 30Y", symbol: "^TYX" },
 ] as const;
 
 export interface YahooIndicator {
