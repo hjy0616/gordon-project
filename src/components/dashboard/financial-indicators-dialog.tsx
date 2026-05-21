@@ -45,11 +45,12 @@ function GridSkeleton() {
 
 export function FinancialIndicatorsDialog({ open, onOpenChange }: Props) {
   const [range, setRange] = useState<DashboardHistoryRange>("3m");
-  const { data, isLoading, isFetching, refetch } = useDashboardHistory(range);
+  const { data, isLoading, refetch } = useDashboardHistory(range);
 
   const series = data?.series ?? [];
-  const isErrorState =
-    !isLoading && !isFetching && (data?.source === "error" || series.length === 0);
+  const isErrorState = !isLoading && data?.source === "error";
+  const isEmptyState =
+    !isLoading && data?.source !== "error" && series.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,7 +98,7 @@ export function FinancialIndicatorsDialog({ open, onOpenChange }: Props) {
 
         {/* Body */}
         <div className="flex-1 overflow-auto p-4">
-          {isLoading || isFetching ? (
+          {isLoading ? (
             <GridSkeleton />
           ) : isErrorState ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
@@ -111,6 +112,12 @@ export function FinancialIndicatorsDialog({ open, onOpenChange }: Props) {
               >
                 재시도
               </button>
+            </div>
+          ) : isEmptyState ? (
+            <div className="flex h-full items-center justify-center">
+              <p className="text-sm text-muted-foreground">
+                표시할 데이터가 없습니다.
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

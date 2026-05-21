@@ -21,6 +21,7 @@ export function useDashboardHistory(range: DashboardHistoryRange) {
     },
     staleTime: 5 * 60 * 1000,
     retry: 2,
-    placeholderData: { ...FALLBACK, range },
+    placeholderData: (previousData) =>
+      previousData ?? { ...FALLBACK, range },
   });
 }
