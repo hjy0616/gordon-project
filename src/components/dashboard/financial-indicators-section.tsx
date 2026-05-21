@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useFearGreedIndex } from "@/lib/queries/use-fear-greed";
 import { useMarketIndices } from "@/lib/queries/use-market-indices";
 import { useYahooIndicators } from "@/lib/queries/use-yahoo-indicators";
 import { useFredIndicators } from "@/lib/queries/use-fred";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FinancialIndicatorsDialog } from "./financial-indicators-dialog";
 
 /* ── helpers ─────────────────────────────────── */
 
@@ -89,6 +91,7 @@ function IndicatorsSkeleton() {
 /* ── main ────────────────────────────────────── */
 
 export function FinancialIndicatorsSection() {
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { data: fgResp, isLoading: fgLoading } = useFearGreedIndex();
   const { data: miResp, isLoading: miLoading } = useMarketIndices();
   const { data: yahooResp, isLoading: yahooLoading } = useYahooIndicators();
@@ -195,12 +198,21 @@ export function FinancialIndicatorsSection() {
   );
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      {/* Header */}
-      <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold text-primary">Yahoo & FRED</h2>
-        <span className="text-[11px] text-muted-foreground" suppressHydrationWarning>{formatTime()}</span>
-      </div>
+    <>
+      <button
+        type="button"
+        onClick={() => setDialogOpen(true)}
+        aria-label="Yahoo & FRED 지표 차트 보기"
+        className="block w-full cursor-pointer rounded-xl border border-border bg-card p-5 text-left transition-shadow hover:ring-1 hover:ring-primary/30 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+      >
+        {/* Header */}
+        <div className="mb-3 flex items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold text-primary">Yahoo & FRED</h2>
+          <div className="flex items-baseline gap-2">
+            <span className="text-[10px] text-primary">차트 보기 →</span>
+            <span className="text-[11px] text-muted-foreground" suppressHydrationWarning>{formatTime()}</span>
+          </div>
+        </div>
 
       {/* 2-column layout */}
       <div className="grid grid-cols-1 gap-x-6 gap-y-0 sm:grid-cols-2">
@@ -244,6 +256,9 @@ export function FinancialIndicatorsSection() {
           {fredRow("RRP 금리", rrpRate, "percent")}
         </div>
       </div>
-    </div>
+      </button>
+
+      <FinancialIndicatorsDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+    </>
   );
 }
