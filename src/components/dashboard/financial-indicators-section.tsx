@@ -120,7 +120,7 @@ export function FinancialIndicatorsSection() {
   const fredData = fredResp?.data ?? [];
   const fred = (id: string) => fredData.find((d) => d.id === id);
 
-  const stressIdx = fred("STLFSI2");
+  const stressIdx = fred("STLFSI4");
   const m2Supply = fred("WM2NS");
   const fedBalance = fred("WALCL");
   const tga = fred("WTREGEN");

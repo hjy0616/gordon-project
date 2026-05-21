@@ -65,7 +65,7 @@ const YAHOO_SPECS: YahooSpec[] = [
 ];
 
 const FRED_SPECS: FredSpec[] = [
-  { id: "STLFSI2", name: "Stress Idx", unit: "index" },
+  { id: "STLFSI4", name: "Stress Idx", unit: "index" },
   { id: "WM2NS", name: "M2 Supply", unit: "number" },
   { id: "WALCL", name: "Fed Balance", unit: "number" },
   { id: "WTREGEN", name: "TGA (Est)", unit: "number" },
@@ -221,13 +221,18 @@ interface FredObservationsResponse {
   observations?: FredObservation[];
 }
 
+// 모든 FRED series에 대해 최소 2년 lookback을 보장. 분기/월 단위 series(MMF Total 등)도
+// 짧은 range(1m/3m)에서 sparkline에 점이 충분히 나오도록 client cutoff은 별도로 적용한다.
+const FRED_LOOKBACK_DAYS_FLOOR = 730;
+
 async function fetchFredOnce(
   id: string,
   apiKey: string,
   range: DashboardHistoryRange,
 ): Promise<FredObservationsResponse | null | "retry"> {
+  const lookbackDays = Math.max(RANGE_DAYS[range], FRED_LOOKBACK_DAYS_FLOOR);
   const startDate = new Date(
-    Date.now() - RANGE_DAYS[range] * 24 * 60 * 60 * 1000,
+    Date.now() - lookbackDays * 24 * 60 * 60 * 1000,
   )
     .toISOString()
     .slice(0, 10);
@@ -264,14 +269,19 @@ async function fetchFred(
   if (!json) return emptySeries(spec, "fred");
 
   const obs = json.observations ?? [];
-  const points: DashboardHistoryPoint[] = [];
+  const rawPoints: DashboardHistoryPoint[] = [];
   for (const o of obs) {
     if (!o.value || o.value === ".") continue;
     const v = Number(o.value);
     if (!Number.isFinite(v)) continue;
-    points.push({ t: Date.parse(o.date), v });
+    rawPoints.push({ t: Date.parse(o.date), v });
   }
-  points.sort((a, b) => a.t - b.t);
+  rawPoints.sort((a, b) => a.t - b.t);
+
+  // range cutoff을 적용하되, cutoff 이후 점이 0개인 저빈도 series(분기/연간 등)는
+  // lookback 데이터를 그대로 둬서 sparkline이 "데이터 없음"이 되지 않게 한다.
+  const filtered = filterByRange(rawPoints, RANGE_DAYS[range]);
+  const points = filtered.length > 0 ? filtered : rawPoints;
 
   return {
     id: spec.id,
@@ -447,7 +457,7 @@ async function computeAll(
       emptySeries(YAHOO_SPECS[2], "yahoo"),
     yahoo.find((s) => s.id === "^TNX") ?? emptySeries(YAHOO_SPECS[3], "yahoo"),
     yahoo.find((s) => s.id === "^TYX") ?? emptySeries(YAHOO_SPECS[4], "yahoo"),
-    fred.find((s) => s.id === "STLFSI2") ?? emptySeries(FRED_SPECS[0], "fred"),
+    fred.find((s) => s.id === "STLFSI4") ?? emptySeries(FRED_SPECS[0], "fred"),
     fred.find((s) => s.id === "WM2NS") ?? emptySeries(FRED_SPECS[1], "fred"),
     fred.find((s) => s.id === "WALCL") ?? emptySeries(FRED_SPECS[2], "fred"),
     fred.find((s) => s.id === "WTREGEN") ?? emptySeries(FRED_SPECS[3], "fred"),
@@ -490,7 +500,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "invalid range" }, { status: 400 });
   }
 
-  const cacheKey = `cache:dashboard-history:v1:${range}`;
+  const cacheKey = `cache:dashboard-history:v2:${range}`;
   const data = await getCachedJson<DashboardHistoryResponse>(
     cacheKey,
     5 * 60 * 1000,

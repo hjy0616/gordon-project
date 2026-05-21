@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const FRED_SERIES = [
-  { id: "STLFSI2", name: "Stress Idx" },
+  { id: "STLFSI4", name: "Stress Idx" },
   { id: "WM2NS", name: "M2 Supply" },
   { id: "WALCL", name: "Fed Balance" },
   { id: "WTREGEN", name: "TGA (Est)" },
