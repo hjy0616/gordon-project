@@ -175,6 +175,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.status = dbUser.status;
         }
       }
+      // ─── 비밀번호 변경 후 stale 토큰 무효화 ───
+      // 새로 로그인한 직후엔 user가 채워지므로 굳이 검사할 필요 없음.
+      // 이미 발급된 토큰이 들어올 때만(=user 없음) 검사.
+      if (!user && token.id && typeof token.iat === "number") {
+        const fresh = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { passwordChangedAt: true },
+        });
+        if (
+          fresh?.passwordChangedAt &&
+          Math.floor(fresh.passwordChangedAt.getTime() / 1000) > (token.iat as number)
+        ) {
+          // 토큰 무효화 — 다음 요청은 비로그인으로 처리됨
+          return null as unknown as typeof token;
+        }
+      }
       return token;
     },
     async session({ session, token }) {
