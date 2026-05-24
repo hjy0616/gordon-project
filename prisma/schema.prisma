@@ -70,6 +70,7 @@ model User {
   lastActiveAt           DateTime?  @map("last_active_at")
   signupSource           String?    @map("signup_source")
   signupReferer          String?    @map("signup_referer")
+  passwordChangedAt      DateTime?  @map("password_changed_at")
   createdAt              DateTime   @default(now()) @map("created_at")
   updatedAt              DateTime   @updatedAt @map("updated_at")
 
@@ -93,6 +94,7 @@ model User {
   userEvents         UserEvent[]
   userStatusLogs     UserStatusLog[]
   financePortfolio   FinancePortfolio?
+  passwordResetCodes PasswordResetCode[]
 
   @@map("users")
 }
@@ -535,4 +537,27 @@ model FinancePortfolio {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("finance_portfolios")
+}
+
+// ══════════════════════════════════════════════════════════
+// PASSWORD RESET (이메일 6자리 코드 흐름)
+// ══════════════════════════════════════════════════════════
+
+model PasswordResetCode {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  codeHash   String    @map("code_hash")
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  lastSentAt DateTime  @default(now()) @map("last_sent_at")
+  sentCount  Int       @default(1) @map("sent_count")
+  requestIp  String?   @map("request_ip")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_codes")
 }
