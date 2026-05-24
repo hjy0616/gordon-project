@@ -30,7 +30,7 @@ export async function sendPasswordResetCode(
 ): Promise<SendResult> {
   try {
     const html = buildHtml(args);
-    const subject = `[Gordon Project] 비밀번호 재설정 코드: ${args.code}`;
+    const subject = "[Gordon Project] 비밀번호 재설정 코드";
     const result = await getClient().emails.send({
       from: PASSWORD_RESET_FROM,
       to: args.to,
