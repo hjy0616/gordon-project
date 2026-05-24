@@ -113,12 +113,17 @@ function LoginForm() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "로그인 중..." : "로그인"}
           </Button>
-          <p className="text-sm text-muted-foreground">
-            계정이 없으신가요?{" "}
+          <div className="flex w-full items-center justify-between text-sm">
+            <Link
+              href="/forgot-password"
+              className="text-muted-foreground hover:text-foreground hover:underline"
+            >
+              비밀번호를 잊으셨나요?
+            </Link>
             <Link href="/register" className="text-primary hover:underline">
               회원가입
             </Link>
-          </p>
+          </div>
         </CardFooter>
       </form>
     </Card>
