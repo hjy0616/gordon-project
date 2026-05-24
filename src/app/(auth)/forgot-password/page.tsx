@@ -38,6 +38,12 @@ export default function ForgotPasswordPage() {
     return () => clearInterval(t);
   }, [resendIn]);
 
+  useEffect(() => {
+    if (step !== "done") return;
+    const t = setTimeout(() => router.push("/login"), 2000);
+    return () => clearTimeout(t);
+  }, [step, router]);
+
   async function handleRequestCode(e?: React.FormEvent) {
     e?.preventDefault();
     setError("");
@@ -115,7 +121,6 @@ export default function ForgotPasswordPage() {
       const data = (await res.json()) as { ok: boolean; code?: string };
       if (data.ok) {
         setStep("done");
-        setTimeout(() => router.push("/login"), 2000);
       } else if (data.code === "TICKET_EXPIRED" || data.code === "CODE_CONSUMED") {
         setError("세션이 만료되었습니다. 코드를 다시 입력해주세요.");
         setStep("code");
