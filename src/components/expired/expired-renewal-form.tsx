@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, CheckCircle, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+import {
+  IMAGE_ACCEPT_ATTR,
+  normalizeImageFile,
+  validateImageFile,
+} from "@/lib/image-upload";
 
 interface InitialStatus {
   hasSubmitted: boolean;
@@ -26,7 +28,9 @@ export function ExpiredRenewalForm({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -34,23 +38,29 @@ export function ExpiredRenewalForm({
     };
   }, [imagePreview]);
 
-  const handleFileSelect = useCallback(
-    (file: File) => {
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        setError("JPG, PNG, WEBP 형식만 허용됩니다.");
+  const handleFileSelect = useCallback(async (raw: File) => {
+    setProcessing(true);
+    try {
+      const normalized = await normalizeImageFile(raw);
+      if ("error" in normalized) {
+        setError(normalized.error);
         return;
       }
-      if (file.size > MAX_FILE_SIZE) {
-        setError("5MB 이하의 이미지만 허용됩니다.");
+      const check = validateImageFile(normalized.file);
+      if (!check.ok) {
+        setError(check.error);
         return;
       }
-      if (imagePreview) URL.revokeObjectURL(imagePreview);
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      setImageFile(normalized.file);
+      setImagePreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(normalized.file);
+      });
       setError("");
-    },
-    [imagePreview]
-  );
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
 
   const handleClear = () => {
     setImageFile(null);
@@ -144,6 +154,18 @@ export function ExpiredRenewalForm({
 
       {error && <p className="text-xs text-destructive">{error}</p>}
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={IMAGE_ACCEPT_ATTR}
+        className="sr-only"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void handleFileSelect(f);
+          e.target.value = "";
+        }}
+      />
+
       {imagePreview ? (
         <div className="relative">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -163,20 +185,11 @@ export function ExpiredRenewalForm({
       ) : (
         <div
           className="flex h-48 cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-muted-foreground/25 transition-colors hover:border-primary/50"
-          onClick={() => {
-            const input = document.createElement("input");
-            input.type = "file";
-            input.accept = ALLOWED_TYPES.join(",");
-            input.onchange = (e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
-              if (file) handleFileSelect(file);
-            };
-            input.click();
-          }}
+          onClick={() => fileInputRef.current?.click()}
         >
           <Upload className="mb-2 size-6 text-muted-foreground" />
           <p className="text-xs text-muted-foreground">
-            클릭하여 이미지 업로드
+            {processing ? "이미지 처리 중..." : "클릭하여 이미지 업로드"}
           </p>
           <p className="text-xs text-muted-foreground/60">
             JPG, PNG, WEBP (최대 5MB)

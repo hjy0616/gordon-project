@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { uploadToS3 } from "@/lib/s3";
+import {
+  IMAGE_MAX_FILE_SIZE,
+  resolveImageContentType,
+} from "@/lib/image-upload";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const RENEWAL_WINDOW_DAYS = 7;
 
 export async function GET() {
@@ -110,14 +112,15 @@ export async function POST(req: Request) {
     );
   }
 
-  if (!ALLOWED_TYPES.includes(image.type)) {
+  const contentType = resolveImageContentType(image);
+  if (!contentType) {
     return NextResponse.json(
       { error: "JPG, PNG, WEBP 형식의 이미지만 허용됩니다." },
       { status: 400 }
     );
   }
 
-  if (image.size > MAX_FILE_SIZE) {
+  if (image.size > IMAGE_MAX_FILE_SIZE) {
     return NextResponse.json(
       { error: "이미지 크기는 5MB 이하여야 합니다." },
       { status: 400 }
@@ -125,11 +128,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    const ext = image.name.split(".").pop() || "jpg";
+    const ext =
+      contentType === "image/jpeg"
+        ? "jpg"
+        : contentType === "image/png"
+          ? "png"
+          : "webp";
     const s3Key = `renewal/${user.id}/${Date.now()}.${ext}`;
     const buffer = Buffer.from(await image.arrayBuffer());
 
-    await uploadToS3(buffer, s3Key, image.type);
+    await uploadToS3(buffer, s3Key, contentType);
 
     await prisma.user.update({
       where: { id: user.id },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { Upload, X, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+import {
+  IMAGE_ACCEPT_ATTR,
+  normalizeImageFile,
+  validateImageFile,
+} from "@/lib/image-upload";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -33,22 +35,36 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
 
   const [dragOver, setDragOver] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = useCallback((file: File) => {
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setError("JPG, PNG, WEBP 형식의 이미지만 허용됩니다.");
-      setErrorField("image");
-      return;
+  const handleFileSelect = useCallback(async (rawFile: File) => {
+    setProcessing(true);
+    try {
+      const normalized = await normalizeImageFile(rawFile);
+      if ("error" in normalized) {
+        setError(normalized.error);
+        setErrorField("image");
+        return;
+      }
+
+      const check = validateImageFile(normalized.file);
+      if (!check.ok) {
+        setError(check.error);
+        setErrorField("image");
+        return;
+      }
+
+      setImageFile(normalized.file);
+      setImagePreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(normalized.file);
+      });
+      setError("");
+      setErrorField("");
+    } finally {
+      setProcessing(false);
     }
-    if (file.size > MAX_FILE_SIZE) {
-      setError("이미지 크기는 5MB 이하여야 합니다.");
-      setErrorField("image");
-      return;
-    }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-    setError("");
-    setErrorField("");
   }, []);
 
   const handleDrop = useCallback(
@@ -56,7 +72,7 @@ export default function RegisterPage() {
       e.preventDefault();
       setDragOver(false);
       const file = e.dataTransfer.files[0];
-      if (file) handleFileSelect(file);
+      if (file) void handleFileSelect(file);
     },
     [handleFileSelect]
   );
@@ -248,6 +264,17 @@ export default function RegisterPage() {
             <p className="text-xs text-muted-foreground">
               네프콘 닉네임과 혜택 기간(결제 종료일)이 함께 보이는 사진을 업로드해주세요.
             </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={IMAGE_ACCEPT_ATTR}
+              className="sr-only"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleFileSelect(f);
+                e.target.value = "";
+              }}
+            />
             {imagePreview ? (
               <div className="relative">
                 <img
@@ -278,20 +305,11 @@ export default function RegisterPage() {
                       ? "border-destructive"
                       : "border-muted-foreground/25 hover:border-primary/50"
                 }`}
-                onClick={() => {
-                  const input = document.createElement("input");
-                  input.type = "file";
-                  input.accept = ALLOWED_TYPES.join(",");
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (file) handleFileSelect(file);
-                  };
-                  input.click();
-                }}
+                onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="mb-2 size-6 text-muted-foreground" />
                 <p className="text-xs text-muted-foreground">
-                  클릭 또는 드래그하여 업로드
+                  {processing ? "이미지 처리 중..." : "클릭 또는 드래그하여 업로드"}
                 </p>
                 <p className="text-xs text-muted-foreground/60">
                   JPG, PNG, WEBP (최대 5MB)

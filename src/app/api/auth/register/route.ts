@@ -4,9 +4,10 @@ import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@/lib/prisma";
 import { uploadToS3 } from "@/lib/s3";
 import { classifyInflowSource } from "@/lib/inflow-source";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+import {
+  IMAGE_MAX_FILE_SIZE,
+  resolveImageContentType,
+} from "@/lib/image-upload";
 
 export async function POST(req: Request) {
   try {
@@ -42,14 +43,15 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!ALLOWED_TYPES.includes(image.type)) {
+    const contentType = resolveImageContentType(image);
+    if (!contentType) {
       return NextResponse.json(
         { error: "JPG, PNG, WEBP 형식의 이미지만 허용됩니다." },
         { status: 400 }
       );
     }
 
-    if (image.size > MAX_FILE_SIZE) {
+    if (image.size > IMAGE_MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: "이미지 크기는 5MB 이하여야 합니다." },
         { status: 400 }
@@ -69,11 +71,16 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const userId = createId();
-    const ext = image.name.split(".").pop() || "jpg";
+    const ext =
+      contentType === "image/jpeg"
+        ? "jpg"
+        : contentType === "image/png"
+          ? "png"
+          : "webp";
     const s3Key = `verification/${userId}/${Date.now()}.${ext}`;
 
     const buffer = Buffer.from(await image.arrayBuffer());
-    await uploadToS3(buffer, s3Key, image.type);
+    await uploadToS3(buffer, s3Key, contentType);
 
     const user = await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
