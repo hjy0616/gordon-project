@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Upload, X, CheckCircle } from "lucide-react";
+import { Upload, X, CheckCircle, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,16 +20,27 @@ import {
   validateImageFile,
 } from "@/lib/image-upload";
 
+const RESEND_COOLDOWN_SEC = 60;
+
 export default function RegisterPage() {
-  const [name, setName] = useState("");
+  // 이메일 인증 관련 state
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [verified, setVerified] = useState(false);
+  const [ticket, setTicket] = useState("");
+  const [resendIn, setResendIn] = useState(0);
+  const [verifying, setVerifying] = useState(false);
+
+  // 회원가입 폼 state
+  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [errorField, setErrorField] = useState<
-    "email" | "password" | "confirm" | "image" | "general" | ""
+    "email" | "code" | "password" | "confirm" | "image" | "general" | ""
   >("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -37,6 +48,12 @@ export default function RegisterPage() {
   const [dragOver, setDragOver] = useState(false);
   const [processing, setProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setInterval(() => setResendIn((s) => (s > 0 ? s - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [resendIn]);
 
   const handleFileSelect = useCallback(async (rawFile: File) => {
     setProcessing(true);
@@ -83,8 +100,7 @@ export default function RegisterPage() {
     setImagePreview(null);
   }, [imagePreview]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSendCode() {
     setError("");
     setErrorField("");
 
@@ -95,6 +111,111 @@ export default function RegisterPage() {
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("올바른 이메일 형식을 입력해주세요.");
+      setErrorField("email");
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      const res = await fetch("/api/auth/email-verify/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.status === 409) {
+        setError("이미 가입된 이메일입니다.");
+        setErrorField("email");
+        return;
+      }
+      if (res.status === 429) {
+        const data = (await res.json()) as { retryAfter?: number };
+        setError(`잠시 후 다시 시도해주세요. (${data.retryAfter ?? 60}초 후)`);
+        setErrorField("email");
+        return;
+      }
+      if (!res.ok) {
+        setError("코드 전송에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        setErrorField("email");
+        return;
+      }
+      setCodeSent(true);
+      setCode("");
+      setResendIn(RESEND_COOLDOWN_SEC);
+    } catch {
+      setError("요청에 실패했습니다.");
+      setErrorField("email");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function handleVerifyCode() {
+    setError("");
+    setErrorField("");
+    if (!/^\d{6}$/.test(code)) {
+      setError("6자리 코드를 입력해주세요.");
+      setErrorField("code");
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      const res = await fetch("/api/auth/email-verify/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+      });
+      const data = (await res.json()) as {
+        ok: boolean;
+        ticket?: string;
+        code?: string;
+      };
+      if (data.ok && data.ticket) {
+        setTicket(data.ticket);
+        setVerified(true);
+      } else if (data.code === "EXPIRED") {
+        setError("코드가 만료되었습니다. 다시 받아주세요.");
+        setErrorField("code");
+        setCodeSent(false);
+        setCode("");
+      } else if (data.code === "MAX_ATTEMPTS") {
+        setError("코드가 무효화되었습니다. 처음부터 다시 시도해주세요.");
+        setErrorField("code");
+        setCodeSent(false);
+        setCode("");
+      } else {
+        setError("코드가 일치하지 않습니다. 다시 확인해주세요.");
+        setErrorField("code");
+      }
+    } catch {
+      setError("요청에 실패했습니다.");
+      setErrorField("code");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  function handleEmailChange(value: string) {
+    setEmail(value);
+    setError("");
+    setErrorField("");
+    // 이메일이 바뀌면 인증 상태 초기화
+    if (verified || codeSent) {
+      setVerified(false);
+      setCodeSent(false);
+      setCode("");
+      setTicket("");
+      setResendIn(0);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setErrorField("");
+
+    if (!verified || !ticket) {
+      setError("이메일 인증을 먼저 완료해주세요.");
       setErrorField("email");
       return;
     }
@@ -123,7 +244,7 @@ export default function RegisterPage() {
 
     const formData = new FormData();
     formData.append("name", name);
-    formData.append("email", email);
+    formData.append("ticket", ticket);
     formData.append("password", password);
     formData.append("verificationImage", imageFile);
 
@@ -143,7 +264,18 @@ export default function RegisterPage() {
       const data = await res.json();
       const msg = data.error || "회원가입에 실패했습니다.";
       setError(msg);
-      setErrorField(msg.includes("이메일") ? "email" : "general");
+      // 이메일 관련 에러면 인증 초기화 (만료 등)
+      if (msg.includes("이메일 인증")) {
+        setVerified(false);
+        setCodeSent(false);
+        setCode("");
+        setTicket("");
+        setErrorField("email");
+      } else if (msg.includes("이메일")) {
+        setErrorField("email");
+      } else {
+        setErrorField("general");
+      }
       setLoading(false);
       return;
     }
@@ -203,25 +335,88 @@ export default function RegisterPage() {
               onChange={(e) => setName(e.target.value)}
             />
           </div>
+
+          {/* 이메일 + 인증 */}
           <div className="space-y-1">
             <Label htmlFor="email">이메일</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="email@example.com"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError("");
-                setErrorField("");
-              }}
-              className={errorField === "email" ? "border-destructive" : ""}
-              required
-            />
+            <div className="flex gap-2">
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@example.com"
+                value={email}
+                onChange={(e) => handleEmailChange(e.target.value)}
+                className={`flex-1 ${errorField === "email" ? "border-destructive" : ""}`}
+                disabled={verified}
+                required
+              />
+              {!verified && !codeSent && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleSendCode}
+                  disabled={verifying || !email}
+                  className="shrink-0"
+                >
+                  {verifying ? "전송 중..." : "코드 전송"}
+                </Button>
+              )}
+            </div>
             {errorField === "email" && (
               <p className="text-xs text-destructive">{error}</p>
             )}
+
+            {codeSent && !verified && (
+              <div className="space-y-1 pt-2">
+                <div className="flex gap-2">
+                  <Input
+                    id="email-code"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    placeholder="6자리 인증 코드"
+                    value={code}
+                    onChange={(e) => {
+                      setCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+                      setError("");
+                      setErrorField("");
+                    }}
+                    className={`flex-1 ${errorField === "code" ? "border-destructive" : ""}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleVerifyCode}
+                    disabled={verifying || code.length !== 6}
+                    className="shrink-0"
+                  >
+                    {verifying ? "확인 중..." : "인증 확인"}
+                  </Button>
+                </div>
+                {errorField === "code" && (
+                  <p className="text-xs text-destructive">{error}</p>
+                )}
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+                  disabled={resendIn > 0 || verifying}
+                  onClick={handleSendCode}
+                >
+                  {resendIn > 0
+                    ? `코드 재전송 (${String(resendIn).padStart(2, "0")}초)`
+                    : "코드 재전송"}
+                </button>
+              </div>
+            )}
+
+            {verified && (
+              <p className="flex items-center gap-1.5 pt-1 text-sm font-medium text-green-600 dark:text-green-500">
+                <Check className="size-4" />
+                인증 완료
+              </p>
+            )}
           </div>
+
           <div className="space-y-1">
             <Label htmlFor="password">비밀번호</Label>
             <Input
@@ -322,8 +517,12 @@ export default function RegisterPage() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3 pt-4">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "가입 중..." : "회원가입"}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loading || !verified}
+          >
+            {loading ? "가입 중..." : !verified ? "이메일 인증 후 가입 가능" : "회원가입"}
           </Button>
           <p className="text-sm text-muted-foreground">
             이미 계정이 있으신가요?{" "}
