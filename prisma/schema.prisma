@@ -561,3 +561,24 @@ model PasswordResetCode {
   @@index([expiresAt])
   @@map("password_reset_codes")
 }
+
+// ══════════════════════════════════════════════════════════
+// EMAIL VERIFICATION (회원가입 시 이메일 소유 확인)
+// ══════════════════════════════════════════════════════════
+
+model EmailVerificationCode {
+  id         String    @id @default(cuid())
+  email      String
+  codeHash   String    @map("code_hash")
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  lastSentAt DateTime  @default(now()) @map("last_sent_at")
+  sentCount  Int       @default(1) @map("sent_count")
+  requestIp  String?   @map("request_ip")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([expiresAt])
+  @@map("email_verification_codes")
+}
