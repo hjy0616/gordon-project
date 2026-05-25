@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { MembershipSentinel } from "@/components/membership-sentinel";
+import { QueryProvider } from "@/lib/providers/query-provider";
 
 export default async function ExpiredLayout({
   children,
@@ -32,8 +34,11 @@ export default async function ExpiredLayout({
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-background p-4">
-      {children}
-    </div>
+    <QueryProvider>
+      <MembershipSentinel />
+      <div className="flex min-h-svh items-center justify-center bg-background p-4">
+        {children}
+      </div>
+    </QueryProvider>
   );
 }

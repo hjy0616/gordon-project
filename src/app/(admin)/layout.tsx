@@ -5,6 +5,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
+import { MembershipSentinel } from "@/components/membership-sentinel";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { requireActiveAdminOrRedirect } from "@/lib/auth-utils";
 import { isPortfolioAllowed } from "@/lib/finance-portfolio-access";
@@ -23,6 +24,7 @@ export default async function AdminLayout({
 
   return (
     <QueryProvider>
+      <MembershipSentinel />
       <SidebarProvider>
         <AdminSidebar showPortfolio={showPortfolio} />
         <SidebarInset>

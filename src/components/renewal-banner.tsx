@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,17 +18,35 @@ import {
   normalizeImageFile,
   validateImageFile,
 } from "@/lib/image-upload";
+import {
+  MEMBERSHIP_QUERY_KEY,
+  fetchMembership,
+  type MembershipSnapshot,
+} from "@/hooks/use-membership-sentinel";
 
 interface RenewalStatus {
+  status?: "PENDING" | "ACTIVE" | "EXPIRED" | "SUSPENDED";
   canSubmit: boolean;
   daysRemaining: number | null;
   hasSubmitted: boolean;
   submittedAt: string | null;
+  rejectionReason: string | null;
+  rejectedAt: string | null;
+}
+
+const RENEWAL_QUERY_KEY = ["renewal-status"] as const;
+
+async function fetchRenewalStatus(): Promise<RenewalStatus | null> {
+  const res = await fetch("/api/verification/renewal").catch(() => null);
+  if (!res || !res.ok) return null;
+  const data = (await res.json().catch(() => null)) as RenewalStatus | null;
+  return data;
 }
 
 export function RenewalBanner() {
   const { data: session } = useSession();
-  const [status, setStatus] = useState<RenewalStatus | null>(null);
+  const queryClient = useQueryClient();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -36,21 +55,31 @@ export function RenewalBanner() {
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!session?.user?.activeUntil) return;
+  // sentinel polling cache 구독 — useSession() stale 우회
+  const { data: membershipSnapshot } = useQuery<MembershipSnapshot>({
+    queryKey: MEMBERSHIP_QUERY_KEY,
+    queryFn: fetchMembership,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+  const freshActiveUntil =
+    membershipSnapshot?.kind === "ok" ? membershipSnapshot.activeUntil : null;
+  const activeUntil = freshActiveUntil ?? session?.user?.activeUntil ?? null;
+  const daysRemaining = (() => {
+    if (!activeUntil) return null;
+    const until = new Date(activeUntil);
+    return Math.ceil((until.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  })();
+  const shouldFetch =
+    daysRemaining !== null && daysRemaining <= 7 && daysRemaining > 0;
 
-    const now = new Date();
-    const until = new Date(session.user.activeUntil);
-    const days = Math.ceil((until.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    // Only fetch renewal status if within 7-day window
-    if (days > 7 || days <= 0) return;
-
-    fetch("/api/verification/renewal")
-      .then((r) => r.json())
-      .then(setStatus)
-      .catch(() => {});
-  }, [session?.user?.activeUntil]);
+  const { data: status } = useQuery<RenewalStatus | null>({
+    queryKey: RENEWAL_QUERY_KEY,
+    queryFn: fetchRenewalStatus,
+    enabled: shouldFetch,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
 
   const handleFileSelect = useCallback(async (raw: File) => {
     setProcessing(true);
@@ -90,15 +119,13 @@ export function RenewalBanner() {
     });
 
     if (!res.ok) {
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       setError(data.error || "업로드에 실패했습니다.");
       setUploading(false);
       return;
     }
 
-    setStatus((prev) =>
-      prev ? { ...prev, hasSubmitted: true, canSubmit: false } : null
-    );
+    await queryClient.invalidateQueries({ queryKey: RENEWAL_QUERY_KEY });
     setDialogOpen(false);
     setImageFile(null);
     if (imagePreview) URL.revokeObjectURL(imagePreview);

@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { HeartbeatMount } from "@/components/heartbeat-mount";
+import { MembershipSentinel } from "@/components/membership-sentinel";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { requireActiveUserOrRedirect } from "@/lib/auth-utils";
 import { getSignedImageUrl } from "@/lib/s3";
@@ -17,6 +18,7 @@ export default async function AppLayout({
   return (
     <QueryProvider>
       <HeartbeatMount />
+      <MembershipSentinel />
       <SidebarProvider>
         <AppSidebar
           user={{
