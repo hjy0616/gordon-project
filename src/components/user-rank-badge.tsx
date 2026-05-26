@@ -16,7 +16,7 @@ const SIZE_CLASSES: Record<Size, string> = {
   default: "size-[22px] -bottom-[2px] -right-[4px]",
   sm: "size-[18px] -bottom-[2px] -right-[3px]",
   xs: "size-[14px] -bottom-[1px] -right-[2px] border",
-  xxs: "size-[10px] bottom-0 right-0 border-0",
+  xxs: "size-[12px] -bottom-0 -right-0 border border-background",
 };
 
 const ICON_PX: Record<Size, number> = {
