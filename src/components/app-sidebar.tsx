@@ -93,17 +93,14 @@ function NavUser({
             render={<SidebarMenuButton size="lg" />}
           >
             <div className="relative inline-flex shrink-0">
-              <Avatar className="size-8 rounded-lg">
+              <Avatar className="size-8">
                 {avatarUrl ? (
                   <AvatarImage
                     src={avatarUrl}
                     alt={user.name ?? user.email}
-                    className="rounded-lg"
                   />
                 ) : null}
-                <AvatarFallback className="rounded-lg">
-                  {initials}
-                </AvatarFallback>
+                <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
               <UserRankBadge userId={user.id} size="sm" />
             </div>
