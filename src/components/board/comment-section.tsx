@@ -98,14 +98,14 @@ function CommentItemView({
 
   return (
     <li className="flex gap-3 py-3">
-      <div className="relative inline-flex shrink-0">
+      <div className="relative inline-flex shrink-0 self-start">
         <Avatar className="size-8 shrink-0">
           {comment.author.image && (
             <AvatarImage src={comment.author.image} alt={comment.author.name ?? ""} />
           )}
           <AvatarFallback className="text-xs">{initials}</AvatarFallback>
         </Avatar>
-        <UserRankBadge userId={comment.author.id} size="sm" />
+        <UserRankBadge userId={comment.author.id} size="xs" />
       </div>
       <div className="flex-1">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
