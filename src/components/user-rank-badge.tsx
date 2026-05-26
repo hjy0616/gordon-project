@@ -16,14 +16,14 @@ const SIZE_CLASSES: Record<Size, string> = {
   default: "size-[22px] -bottom-[2px] -right-[4px]",
   sm: "size-[18px] -bottom-[2px] -right-[3px]",
   xs: "size-[14px] -bottom-[1px] -right-[2px] border",
-  xxs: "size-[12px] -bottom-0 -right-0 border",
+  xxs: "size-[10px] bottom-0 right-0 border-0",
 };
 
 const ICON_PX: Record<Size, number> = {
   default: 12,
   sm: 10,
   xs: 8,
-  xxs: 7,
+  xxs: 6,
 };
 
 export function UserRankBadge({
