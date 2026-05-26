@@ -21,8 +21,8 @@ const SIZE_CLASSES: Record<Size, string> = {
 
 const ICON_PX: Record<Size, number> = {
   default: 12,
-  sm: 10,
-  xs: 8,
+  sm: 9,
+  xs: 7,
   xxs: 6,
 };
 
@@ -55,7 +55,7 @@ export function UserRankBadge({
         className={cn(base, "bg-primary text-primary-foreground")}
         aria-label="관리자"
       >
-        <Shield size={ICON_PX[size]} strokeWidth={2.5} />
+        <Shield size={ICON_PX[size]} strokeWidth={2} />
       </span>
     );
   }
