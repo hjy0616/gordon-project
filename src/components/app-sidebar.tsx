@@ -105,7 +105,13 @@ function NavUser({
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <UserRankBadge userId={user.id} size="sm" />
+              <UserRankBadge
+                userId={user.id}
+                size="default"
+                iconSize={10}
+                iconStrokeWidth={2}
+                className="!size-[18px] -bottom-[1px] -right-[2px]"
+              />
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-semibold">

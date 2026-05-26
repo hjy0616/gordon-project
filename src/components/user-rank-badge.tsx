@@ -9,6 +9,8 @@ type Size = "default" | "sm" | "xs" | "xxs";
 interface UserRankBadgeProps {
   userId: string;
   size?: Size;
+  iconSize?: number;
+  iconStrokeWidth?: number;
   className?: string;
 }
 
@@ -29,6 +31,8 @@ const ICON_PX: Record<Size, number> = {
 export function UserRankBadge({
   userId,
   size = "default",
+  iconSize,
+  iconStrokeWidth,
   className,
 }: UserRankBadgeProps) {
   const { data } = useLeaderboardTop3();
@@ -43,11 +47,17 @@ export function UserRankBadge({
   }
 
   const base = cn(
-    "absolute rounded-full flex items-center justify-center",
+    "absolute rounded-full flex items-center justify-center overflow-hidden",
     "z-10 border-2 border-background shadow-sm pointer-events-none",
     SIZE_CLASSES[size],
     className,
   );
+
+  const resolvedIconPx = iconSize ?? ICON_PX[size];
+  const iconInlineSize = {
+    width: `${resolvedIconPx}px`,
+    height: `${resolvedIconPx}px`,
+  };
 
   if (isAdmin) {
     return (
@@ -55,7 +65,11 @@ export function UserRankBadge({
         className={cn(base, "bg-primary text-primary-foreground")}
         aria-label="관리자"
       >
-        <Shield size={ICON_PX[size]} strokeWidth={2} />
+        <Shield
+          size={resolvedIconPx}
+          strokeWidth={iconStrokeWidth ?? 2}
+          style={iconInlineSize}
+        />
       </span>
     );
   }
@@ -73,7 +87,12 @@ export function UserRankBadge({
       style={rankStyle}
       aria-label={`활동량 ${rank}위`}
     >
-      <Crown size={ICON_PX[size]} strokeWidth={2.5} fill="currentColor" />
+      <Crown
+        size={resolvedIconPx}
+        strokeWidth={iconStrokeWidth ?? 2.5}
+        fill="currentColor"
+        style={iconInlineSize}
+      />
     </span>
   );
 }
