@@ -111,7 +111,7 @@ export default async function PostDetailPage({ params }: PageProps) {
                   )}
                   <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                 </Avatar>
-                <UserRankBadge userId={post.author.id} size="xs" />
+                <UserRankBadge userId={post.author.id} size="sm" />
               </div>
               <span className="font-medium">{post.author.name ?? "익명"}</span>
               <span className="text-xs text-muted-foreground">

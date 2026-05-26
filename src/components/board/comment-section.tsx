@@ -105,7 +105,7 @@ function CommentItemView({
           )}
           <AvatarFallback className="text-xs">{initials}</AvatarFallback>
         </Avatar>
-        <UserRankBadge userId={comment.author.id} size="xs" />
+        <UserRankBadge userId={comment.author.id} size="sm" />
       </div>
       <div className="flex-1">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">

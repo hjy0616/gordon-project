@@ -4,7 +4,7 @@ import { Crown, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLeaderboardTop3 } from "@/lib/queries/use-leaderboard-top3";
 
-type Size = "default" | "sm" | "xs";
+type Size = "default" | "sm" | "xs" | "xxs";
 
 interface UserRankBadgeProps {
   userId: string;
@@ -16,12 +16,14 @@ const SIZE_CLASSES: Record<Size, string> = {
   default: "size-[22px] -bottom-[2px] -right-[4px]",
   sm: "size-[18px] -bottom-[2px] -right-[3px]",
   xs: "size-[14px] -bottom-[1px] -right-[2px] border",
+  xxs: "size-[12px] -bottom-0 -right-0 border",
 };
 
 const ICON_PX: Record<Size, number> = {
   default: 12,
   sm: 10,
   xs: 8,
+  xxs: 7,
 };
 
 export function UserRankBadge({
