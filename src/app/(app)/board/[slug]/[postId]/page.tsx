@@ -12,6 +12,7 @@ import { LikeButton } from "@/components/board/like-button";
 import { ViewCounter } from "@/components/board/view-counter";
 import { CommentSection } from "@/components/board/comment-section";
 import { PostActions } from "@/components/board/post-actions";
+import { UserRankBadge } from "@/components/user-rank-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -103,12 +104,15 @@ export default async function PostDetailPage({ params }: PageProps) {
           <h1 className="text-2xl font-semibold leading-snug">{post.title}</h1>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-sm">
-              <Avatar className="size-7">
-                {authorImageUrl && (
-                  <AvatarImage src={authorImageUrl} alt={post.author.name ?? ""} />
-                )}
-                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-              </Avatar>
+              <div className="relative inline-flex shrink-0">
+                <Avatar className="size-7">
+                  {authorImageUrl && (
+                    <AvatarImage src={authorImageUrl} alt={post.author.name ?? ""} />
+                  )}
+                  <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                </Avatar>
+                <UserRankBadge userId={post.author.id} size="sm" />
+              </div>
               <span className="font-medium">{post.author.name ?? "익명"}</span>
               <span className="text-xs text-muted-foreground">
                 {formatDateTime(post.createdAt)}
