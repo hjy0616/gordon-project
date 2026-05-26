@@ -53,6 +53,7 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { SidebarRenewalStatus } from "@/components/sidebar-renewal-status";
+import { UserRankBadge } from "@/components/user-rank-badge";
 
 const mapSubItems = [
   { title: "Macro Map", href: "/map/macro-map", icon: Globe },
@@ -60,6 +61,7 @@ const mapSubItems = [
 ];
 
 type NavUserData = {
+  id: string;
   name: string | null;
   email: string;
   role: string;
@@ -90,18 +92,21 @@ function NavUser({
           <DropdownMenuTrigger
             render={<SidebarMenuButton size="lg" />}
           >
-            <Avatar className="size-8 rounded-lg">
-              {avatarUrl ? (
-                <AvatarImage
-                  src={avatarUrl}
-                  alt={user.name ?? user.email}
-                  className="rounded-lg"
-                />
-              ) : null}
-              <AvatarFallback className="rounded-lg">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative inline-flex shrink-0">
+              <Avatar className="size-8 rounded-lg">
+                {avatarUrl ? (
+                  <AvatarImage
+                    src={avatarUrl}
+                    alt={user.name ?? user.email}
+                    className="rounded-lg"
+                  />
+                ) : null}
+                <AvatarFallback className="rounded-lg">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <UserRankBadge userId={user.id} size="sm" />
+            </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-semibold">
                 {user.name || "사용자"}
