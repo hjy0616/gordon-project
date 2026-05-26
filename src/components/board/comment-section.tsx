@@ -7,6 +7,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserRankBadge } from "@/components/user-rank-badge";
 
 const MAX_COMMENT_LENGTH = 2000;
 
@@ -97,12 +98,15 @@ function CommentItemView({
 
   return (
     <li className="flex gap-3 py-3">
-      <Avatar className="size-8 shrink-0">
-        {comment.author.image && (
-          <AvatarImage src={comment.author.image} alt={comment.author.name ?? ""} />
-        )}
-        <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-      </Avatar>
+      <div className="relative inline-flex shrink-0">
+        <Avatar className="size-8 shrink-0">
+          {comment.author.image && (
+            <AvatarImage src={comment.author.image} alt={comment.author.name ?? ""} />
+          )}
+          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+        </Avatar>
+        <UserRankBadge userId={comment.author.id} size="sm" />
+      </div>
       <div className="flex-1">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">
