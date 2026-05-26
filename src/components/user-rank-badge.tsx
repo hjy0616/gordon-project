@@ -40,7 +40,7 @@ export function UserRankBadge({
 
   const base = cn(
     "absolute rounded-full flex items-center justify-center",
-    "border-2 border-background shadow-sm pointer-events-none",
+    "z-10 border-2 border-background shadow-sm pointer-events-none",
     SIZE_CLASSES[size],
     className,
   );
