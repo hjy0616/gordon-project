@@ -50,6 +50,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Activity rank badge colors */
+  --rank-gold: oklch(0.78 0.15 85);
+  --rank-silver: oklch(0.78 0.02 250);
+  --rank-bronze: oklch(0.62 0.12 50);
 }
 
 :root {
