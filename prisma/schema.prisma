@@ -582,3 +582,37 @@ model EmailVerificationCode {
   @@index([expiresAt])
   @@map("email_verification_codes")
 }
+
+// ══════════════════════════════════════════════════════════
+// LINKS — 어드민 큐레이션 외부 리소스 모음
+// ══════════════════════════════════════════════════════════
+
+model LinkCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt        @map("updated_at")
+
+  links     Link[]
+
+  @@index([sortOrder])
+  @@map("link_categories")
+}
+
+model Link {
+  id          String   @id @default(cuid())
+  title       String
+  author      String
+  url         String
+  description String?
+  categoryId  String   @map("category_id")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt        @map("updated_at")
+
+  category    LinkCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([categoryId, sortOrder])
+  @@map("links")
+}
