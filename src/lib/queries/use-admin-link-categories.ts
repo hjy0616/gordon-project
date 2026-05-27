@@ -19,7 +19,6 @@ export function useAdminLinkCategories() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     fetch("/api/admin/link-categories")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -38,7 +37,10 @@ export function useAdminLinkCategories() {
     };
   }, [refetchKey]);
 
-  const refetch = useCallback(() => setRefetchKey((k) => k + 1), []);
+  const refetch = useCallback(() => {
+    setLoading(true);
+    setRefetchKey((k) => k + 1);
+  }, []);
 
   const invalidatePublic = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["links"] });

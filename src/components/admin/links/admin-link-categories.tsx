@@ -168,6 +168,7 @@ export function AdminLinkCategories({
       )}
 
       <CategoryFormDialog
+        key={editing?.id ?? "new"}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         initial={editing}

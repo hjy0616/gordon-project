@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -38,31 +38,17 @@ export function LinkFormDialog({
   categories,
   onSubmit,
 }: LinkFormDialogProps) {
-  const [title, setTitle] = useState("");
-  const [url, setUrl] = useState("");
-  const [author, setAuthor] = useState("");
-  const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [title, setTitle] = useState(() => initial?.title ?? "");
+  const [url, setUrl] = useState(() => initial?.url ?? "");
+  const [author, setAuthor] = useState(() => initial?.author ?? "");
+  const [description, setDescription] = useState(
+    () => initial?.description ?? "",
+  );
+  const [categoryId, setCategoryId] = useState(
+    () => initial?.categoryId ?? categories[0]?.id ?? "",
+  );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    if (initial) {
-      setTitle(initial.title);
-      setUrl(initial.url);
-      setAuthor(initial.author);
-      setDescription(initial.description ?? "");
-      setCategoryId(initial.categoryId);
-    } else {
-      setTitle("");
-      setUrl("");
-      setAuthor("");
-      setDescription("");
-      setCategoryId(categories[0]?.id ?? "");
-    }
-    setError(null);
-  }, [open, initial, categories]);
 
   const handleSubmit = async () => {
     setSubmitting(true);

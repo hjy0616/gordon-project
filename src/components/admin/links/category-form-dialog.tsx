@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,15 +25,9 @@ export function CategoryFormDialog({
   initial,
   onSubmit,
 }: CategoryFormDialogProps) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(() => initial?.name ?? "");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setName(initial?.name ?? "");
-    setError(null);
-  }, [open, initial]);
 
   const handleSubmit = async () => {
     setSubmitting(true);

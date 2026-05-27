@@ -282,6 +282,7 @@ export function AdminLinksList({ categories }: AdminLinksListProps) {
       </div>
 
       <LinkFormDialog
+        key={editing?.id ?? "new"}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         initial={editing}

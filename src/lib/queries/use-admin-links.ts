@@ -31,7 +31,6 @@ export function useAdminLinks() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     fetch("/api/links")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -70,7 +69,10 @@ export function useAdminLinks() {
     };
   }, [refetchKey]);
 
-  const refetch = useCallback(() => setRefetchKey((k) => k + 1), []);
+  const refetch = useCallback(() => {
+    setLoading(true);
+    setRefetchKey((k) => k + 1);
+  }, []);
 
   const invalidatePublic = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["links"] });
