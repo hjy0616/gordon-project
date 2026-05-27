@@ -12,6 +12,7 @@ import {
   Globe,
   Layers,
   LayoutDashboard,
+  Link2,
   LogOut,
   Map,
   MapPin,
@@ -213,6 +214,17 @@ export function AppSidebar({
                 >
                   <LayoutDashboard />
                   <span>Dashboard</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={pathname === "/links"}
+                  tooltip="Links"
+                  render={<Link href="/links" />}
+                >
+                  <Link2 />
+                  <span>Links</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 

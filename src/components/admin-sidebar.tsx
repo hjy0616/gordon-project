@@ -12,6 +12,7 @@ import {
   ChevronsUpDown,
   FileCheck,
   LayoutDashboard,
+  Link2,
   LogOut,
   MessageSquare,
   Moon,
@@ -64,6 +65,7 @@ const baseNavItems: NavItem[] = [
   { title: "재인증", href: "/admin/renewals", icon: FileCheck, badgeKey: "renewal" },
   { title: "사용자 관리", href: "/admin/users", icon: Users, badgeKey: null },
   { title: "게시판 관리", href: "/admin/boards", icon: MessageSquare, badgeKey: null },
+  { title: "Links 관리", href: "/admin/links", icon: Link2, badgeKey: null },
 ];
 
 function NavUser() {
