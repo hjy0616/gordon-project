@@ -121,7 +121,11 @@ export function LinkFormDialog({
               onValueChange={(v) => v && setCategoryId(v)}
             >
               <SelectTrigger id="link-category">
-                <SelectValue placeholder="카테고리 선택" />
+                <SelectValue placeholder="카테고리 선택">
+                  {(v) =>
+                    categories.find((c) => c.id === v)?.name ?? "카테고리 선택"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (

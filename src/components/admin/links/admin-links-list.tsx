@@ -93,7 +93,11 @@ function SortableRow({
           onValueChange={(v) => v && onChangeCategory(v)}
         >
           <SelectTrigger className="h-8 w-40">
-            <SelectValue />
+            <SelectValue>
+              {(v) =>
+                categories.find((c) => c.id === v)?.name ?? "카테고리"
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {categories.map((c) => (
@@ -184,7 +188,13 @@ export function AdminLinksList({ categories }: AdminLinksListProps) {
           onValueChange={(v) => v && setFilterCategory(v)}
         >
           <SelectTrigger className="w-60">
-            <SelectValue />
+            <SelectValue>
+              {(v) =>
+                v === ALL
+                  ? "전체 카테고리"
+                  : categories.find((c) => c.id === v)?.name ?? "카테고리"
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}>전체 카테고리</SelectItem>
