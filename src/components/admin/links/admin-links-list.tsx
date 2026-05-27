@@ -217,37 +217,37 @@ export function AdminLinksList({ categories }: AdminLinksListProps) {
         </div>
       ) : null}
 
-      <div className="rounded-md border border-border">
-        <table className="w-full">
-          <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
-            <tr className="border-b border-border">
-              <th className="w-8 px-2 py-2"></th>
-              <th className="px-2 py-2">카테고리</th>
-              <th className="px-2 py-2">제목</th>
-              <th className="px-2 py-2">작성자</th>
-              <th className="px-2 py-2">URL</th>
-              <th className="px-2 py-2 text-right">액션</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="px-2 py-6 text-center text-sm text-muted-foreground">
-                  불러오는 중...
-                </td>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="rounded-md border border-border">
+          <table className="w-full">
+            <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
+              <tr className="border-b border-border">
+                <th className="w-8 px-2 py-2"></th>
+                <th className="px-2 py-2">카테고리</th>
+                <th className="px-2 py-2">제목</th>
+                <th className="px-2 py-2">작성자</th>
+                <th className="px-2 py-2">URL</th>
+                <th className="px-2 py-2 text-right">액션</th>
               </tr>
-            ) : visibleLinks.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-2 py-6 text-center text-sm text-muted-foreground">
-                  링크가 없습니다.
-                </td>
-              </tr>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-2 py-6 text-center text-sm text-muted-foreground">
+                    불러오는 중...
+                  </td>
+                </tr>
+              ) : visibleLinks.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-2 py-6 text-center text-sm text-muted-foreground">
+                    링크가 없습니다.
+                  </td>
+                </tr>
+              ) : (
                 <SortableContext
                   items={visibleLinks.map((l) => l.id)}
                   strategy={verticalListSortingStrategy}
@@ -275,11 +275,11 @@ export function AdminLinksList({ categories }: AdminLinksListProps) {
                     />
                   ))}
                 </SortableContext>
-              </DndContext>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </DndContext>
 
       <LinkFormDialog
         key={editing?.id ?? "new"}
