@@ -61,6 +61,12 @@ export function LinksClient() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <header className="mb-6">
+        <h1 className="text-2xl font-semibold text-foreground">Links</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          망고단 링크 정보 모음
+        </p>
+      </header>
       <div className="mb-6 space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
