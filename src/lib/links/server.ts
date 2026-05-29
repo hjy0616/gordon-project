@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
+import { parseEpisodes, type LinkEpisode } from "@/lib/links/types";
 
 export interface GroupedLinkItem {
   id: string;
   title: string;
-  author: string;
+  author: string | null;
   url: string;
   description: string | null;
+  episodes: LinkEpisode[] | null;
   sortOrder: number;
 }
 
@@ -28,6 +30,7 @@ export async function getGroupedLinks(): Promise<GroupedLinkCategory[]> {
           author: true,
           url: true,
           description: true,
+          episodes: true,
           sortOrder: true,
         },
       },
@@ -38,6 +41,14 @@ export async function getGroupedLinks(): Promise<GroupedLinkCategory[]> {
     id: c.id,
     name: c.name,
     sortOrder: c.sortOrder,
-    links: c.links,
+    links: c.links.map((l) => ({
+      id: l.id,
+      title: l.title,
+      author: l.author,
+      url: l.url,
+      description: l.description,
+      episodes: parseEpisodes(l.episodes),
+      sortOrder: l.sortOrder,
+    })),
   }));
 }
