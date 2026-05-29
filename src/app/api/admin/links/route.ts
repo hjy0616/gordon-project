@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireActiveAdmin } from "@/lib/auth-utils";
 import { validateLinkInput } from "@/lib/links/validation";
@@ -14,7 +15,7 @@ export async function POST(req: Request) {
   if (!v.ok) {
     return NextResponse.json({ error: v.error }, { status: 400 });
   }
-  const { title, url, author, description, categoryId } = v.value;
+  const { title, url, author, description, episodes, categoryId } = v.value;
 
   const category = await prisma.linkCategory.findUnique({
     where: { id: categoryId },
@@ -31,13 +32,22 @@ export async function POST(req: Request) {
   const nextOrder = (maxOrder._max.sortOrder ?? -1) + 1;
 
   const created = await prisma.link.create({
-    data: { title, url, author, description, categoryId, sortOrder: nextOrder },
+    data: {
+      title,
+      url,
+      author,
+      description,
+      episodes: episodes ? (episodes as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+      categoryId,
+      sortOrder: nextOrder,
+    },
     select: {
       id: true,
       title: true,
       author: true,
       url: true,
       description: true,
+      episodes: true,
       categoryId: true,
       sortOrder: true,
     },

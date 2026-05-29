@@ -19,7 +19,7 @@ export async function PATCH(
   if (!v.ok) {
     return NextResponse.json({ error: v.error }, { status: 400 });
   }
-  const { title, url, author, description, categoryId } = v.value;
+  const { title, url, author, description, episodes, categoryId } = v.value;
 
   const current = await prisma.link.findUnique({
     where: { id },
@@ -49,13 +49,22 @@ export async function PATCH(
   try {
     const updated = await prisma.link.update({
       where: { id },
-      data: { title, url, author, description, categoryId, ...sortOrderUpdate },
+      data: {
+        title,
+        url,
+        author,
+        description,
+        episodes: episodes ? (episodes as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+        categoryId,
+        ...sortOrderUpdate,
+      },
       select: {
         id: true,
         title: true,
         author: true,
         url: true,
         description: true,
+        episodes: true,
         categoryId: true,
         sortOrder: true,
       },
