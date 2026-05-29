@@ -603,9 +603,10 @@ model LinkCategory {
 model Link {
   id          String   @id @default(cuid())
   title       String
-  author      String
+  author      String?
   url         String
   description String?
+  episodes    Json?
   categoryId  String   @map("category_id")
   sortOrder   Int      @default(0) @map("sort_order")
   createdAt   DateTime @default(now()) @map("created_at")
