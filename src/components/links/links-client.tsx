@@ -125,6 +125,7 @@ export function LinksClient() {
                     author={link.author}
                     url={link.url}
                     description={link.description}
+                    episodes={link.episodes}
                   />
                 ))}
               </div>
