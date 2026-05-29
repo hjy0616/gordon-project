@@ -110,7 +110,8 @@ function SortableRow({
       </td>
       <td className="px-2 py-2 font-medium">{link.title}</td>
       <td className="px-2 py-2 font-mono text-xs text-muted-foreground">
-        {link.author}
+        {link.author ??
+          (link.episodes ? `네프콘 · ${link.episodes.length}회차` : "—")}
       </td>
       <td className="max-w-xs truncate px-2 py-2 text-sm text-muted-foreground">
         <a
@@ -279,6 +280,7 @@ export function AdminLinksList({ categories }: AdminLinksListProps) {
                           url: link.url,
                           author: link.author,
                           description: link.description,
+                          episodes: link.episodes,
                           categoryId: newCatId,
                         })
                       }
