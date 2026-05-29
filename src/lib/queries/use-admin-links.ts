@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import type { LinkEpisode } from "@/lib/links/types";
 
 export interface AdminLink {
   id: string;
   title: string;
-  author: string;
+  author: string | null;
   url: string;
   description: string | null;
+  episodes: LinkEpisode[] | null;
   categoryId: string;
   sortOrder: number;
   category: { id: string; name: string };
@@ -17,8 +19,9 @@ export interface AdminLink {
 export interface AdminLinkFormPayload {
   title: string;
   url: string;
-  author: string;
+  author: string | null;
   description: string | null;
+  episodes: LinkEpisode[] | null;
   categoryId: string;
 }
 
@@ -47,9 +50,10 @@ export function useAdminLinks() {
             links: {
               id: string;
               title: string;
-              author: string;
+              author: string | null;
               url: string;
               description: string | null;
+              episodes: LinkEpisode[] | null;
               sortOrder: number;
             }[];
           }[]
