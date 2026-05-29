@@ -21,11 +21,17 @@ function hostnameOf(url: string): string {
 function matchesQuery(link: GroupedLinkItem, q: string): boolean {
   if (!q) return true;
   const needle = q.toLowerCase();
-  return (
-    link.title.toLowerCase().includes(needle) ||
-    link.author.toLowerCase().includes(needle) ||
-    hostnameOf(link.url).includes(needle)
-  );
+  const haystack = [
+    link.title,
+    link.author ?? "",
+    hostnameOf(link.url),
+    ...(link.episodes
+      ? ["네프콘", ...link.episodes.map((e) => `${e.no} ${e.title}`)]
+      : []),
+  ]
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(needle);
 }
 
 export function LinksClient() {
