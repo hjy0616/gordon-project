@@ -2,13 +2,23 @@
 
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useLinks } from "@/lib/queries/use-links";
 import { LinkCard } from "./link-card";
 import { LinkCategoryChip } from "./link-category-chip";
-import type { GroupedLinkCategory, GroupedLinkItem } from "@/lib/links/server";
+import type {
+  GroupedLinkCategory,
+  GroupedLinkItem,
+  LinkGroup,
+} from "@/lib/links/server";
 
 const ALL = "__all__";
+
+const GROUP_LABEL: Record<LinkGroup, string> = {
+  mango: "🥭 망고단",
+  nefcon: "💵 네프콘",
+};
 
 function hostnameOf(url: string): string {
   try {
@@ -36,24 +46,43 @@ function matchesQuery(link: GroupedLinkItem, q: string): boolean {
 
 export function LinksClient() {
   const { data, isLoading } = useLinks();
+  const [activeGroup, setActiveGroup] = useState<LinkGroup>("mango");
   const [activeCategory, setActiveCategory] = useState<string>(ALL);
   const [query, setQuery] = useState("");
 
-  const categories: GroupedLinkCategory[] = data?.categories ?? [];
+  const categories = useMemo<GroupedLinkCategory[]>(
+    () => data?.categories ?? [],
+    [data],
+  );
 
   const visibleCategories = useMemo(
     () => categories.filter((c) => c.links.length > 0),
     [categories],
   );
 
+  const groupCounts = useMemo(() => {
+    let mango = 0;
+    let nefcon = 0;
+    for (const c of visibleCategories) {
+      if (c.group === "nefcon") nefcon += c.links.length;
+      else mango += c.links.length;
+    }
+    return { mango, nefcon };
+  }, [visibleCategories]);
+
+  const groupCategories = useMemo(
+    () => visibleCategories.filter((c) => c.group === activeGroup),
+    [visibleCategories, activeGroup],
+  );
+
   const totalCount = useMemo(
-    () => visibleCategories.reduce((sum, c) => sum + c.links.length, 0),
-    [visibleCategories],
+    () => groupCategories.reduce((sum, c) => sum + c.links.length, 0),
+    [groupCategories],
   );
 
   const renderedGroups = useMemo(() => {
     const trimmed = query.trim();
-    return visibleCategories.flatMap<{
+    return groupCategories.flatMap<{
       id: string;
       name: string;
       links: GroupedLinkItem[];
@@ -63,7 +92,28 @@ export function LinksClient() {
       if (links.length === 0) return [];
       return [{ id: c.id, name: c.name, links }];
     });
-  }, [visibleCategories, activeCategory, query]);
+  }, [groupCategories, activeCategory, query]);
+
+  // 현재 영역엔 검색 결과가 없지만 다른 영역엔 있는 경우의 안내용 카운트
+  const otherGroup: LinkGroup = activeGroup === "mango" ? "nefcon" : "mango";
+  const otherGroupMatches = useMemo(() => {
+    const trimmed = query.trim();
+    if (!trimmed) return 0;
+    return visibleCategories
+      .filter((c) => c.group === otherGroup)
+      .reduce(
+        (sum, c) =>
+          sum + c.links.filter((l) => matchesQuery(l, trimmed)).length,
+        0,
+      );
+  }, [visibleCategories, otherGroup, query]);
+
+  const switchGroup = (g: LinkGroup) => {
+    setActiveGroup(g);
+    setActiveCategory(ALL);
+  };
+
+  const groups: LinkGroup[] = ["mango", "nefcon"];
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
@@ -73,6 +123,38 @@ export function LinksClient() {
           망고단 링크 정보 모음
         </p>
       </header>
+
+      {/* 영역 토글: 망고단 / 네프콘 */}
+      <div className="mb-4 inline-flex rounded-lg border border-border bg-card p-0.5">
+        {groups.map((g) => {
+          const active = activeGroup === g;
+          return (
+            <button
+              key={g}
+              type="button"
+              onClick={() => switchGroup(g)}
+              aria-pressed={active}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {GROUP_LABEL[g]}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-xs",
+                  active ? "bg-primary-foreground/20" : "bg-muted",
+                )}
+              >
+                {groupCounts[g]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="mb-6 space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -91,7 +173,7 @@ export function LinksClient() {
             active={activeCategory === ALL}
             onClick={() => setActiveCategory(ALL)}
           />
-          {visibleCategories.map((c) => (
+          {groupCategories.map((c) => (
             <LinkCategoryChip
               key={c.id}
               label={c.name}
@@ -109,7 +191,22 @@ export function LinksClient() {
         </div>
       ) : renderedGroups.length === 0 ? (
         <div className="py-12 text-center text-sm text-muted-foreground">
-          {query.trim() ? "검색 결과가 없습니다." : "등록된 링크가 없습니다."}
+          {query.trim() ? (
+            <div className="space-y-2">
+              <p>이 영역에는 검색 결과가 없습니다.</p>
+              {otherGroupMatches > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => switchGroup(otherGroup)}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {GROUP_LABEL[otherGroup]} 영역에서 {otherGroupMatches}건 보기 →
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            "등록된 링크가 없습니다."
+          )}
         </div>
       ) : (
         <div className="space-y-8">
