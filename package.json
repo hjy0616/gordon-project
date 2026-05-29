@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "seed:links": "bun run scripts/seed-links-from-csv.ts"
+    "seed:links": "bun run scripts/seed-links-from-csv.ts",
+    "import:links": "bun run scripts/import-links-from-md.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
