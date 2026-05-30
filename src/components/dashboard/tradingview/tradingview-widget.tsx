@@ -24,8 +24,12 @@ export function TradingViewWidget({
   const colorTheme = resolvedTheme === "light" ? "light" : "dark";
 
   // 직렬화 문자열을 effect 의존성으로 사용 → 내용이 바뀔 때만 재실행(리빌드 루프 방지).
+  // width/height를 명시적으로 주입(픽셀) → "100%" CSS 비율을 안 먹는 위젯(Market Overview 등)도
+  // 컨테이너 높이를 그대로 따른다. autosize 차트는 이 값을 무시하므로 영향 없음.
   const payload = JSON.stringify({
     ...config,
+    width: "100%",
+    height,
     colorTheme,
     theme: colorTheme,
     locale: "kr",
