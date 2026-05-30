@@ -18,7 +18,7 @@ export const tickerTapeConfig = {
     { proName: "FX_IDC:USDKRW", title: "USD/KRW" },
   ],
   showSymbolLogo: true,
-  isTransparent: true,
+  isTransparent: false,
   displayMode: "adaptive",
 };
 
@@ -38,7 +38,7 @@ export const stockHeatmapConfig = {
 
 export const singleQuoteConfig = {
   symbol: "FX_IDC:USDKRW",
-  isTransparent: true,
+  isTransparent: false,
   width: "100%",
 };
 
@@ -47,7 +47,7 @@ export const marketOverviewConfig = {
   showChart: true,
   showSymbolLogo: true,
   showFloatingTooltip: false,
-  isTransparent: true,
+  isTransparent: false,
   width: "100%",
   height: "100%",
   tabs: [
