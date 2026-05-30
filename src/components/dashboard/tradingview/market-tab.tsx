@@ -7,7 +7,7 @@ import {
   tickerTapeConfig,
   stockHeatmapConfig,
   singleQuoteConfig,
-  symbolOverviewConfig,
+  marketOverviewConfig,
   advancedChartConfig,
   ADVANCED_SYMBOLS,
 } from "@/components/dashboard/tradingview/widgets";
@@ -50,8 +50,8 @@ export function MarketTab() {
           <section>
             <SectionTitle>미국 주요주식</SectionTitle>
             <TradingViewWidget
-              scriptSrc={TV_SCRIPTS.symbolOverview}
-              config={symbolOverviewConfig}
+              scriptSrc={TV_SCRIPTS.marketOverview}
+              config={marketOverviewConfig}
               height={600}
             />
           </section>

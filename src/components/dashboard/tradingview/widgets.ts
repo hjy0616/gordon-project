@@ -4,7 +4,7 @@ export const TV_SCRIPTS = {
   tickerTape: `${BASE}ticker-tape.js`,
   stockHeatmap: `${BASE}stock-heatmap.js`,
   singleQuote: `${BASE}single-quote.js`,
-  symbolOverview: `${BASE}symbol-overview.js`,
+  marketOverview: `${BASE}market-overview.js`,
   advancedChart: `${BASE}advanced-chart.js`,
 } as const;
 
@@ -42,25 +42,29 @@ export const singleQuoteConfig = {
   width: "100%",
 };
 
-export const symbolOverviewConfig = {
-  symbols: [
-    ["테슬라", "NASDAQ:TSLA|1D"],
-    ["엔비디아", "NASDAQ:NVDA|1D"],
-    ["애플", "NASDAQ:AAPL|1D"],
-    ["마이크로소프트", "NASDAQ:MSFT|1D"],
-    ["구글", "NASDAQ:GOOGL|1D"],
-    ["팔란티어", "NASDAQ:PLTR|1D"],
-    ["브로드컴", "NASDAQ:AVGO|1D"],
-    ["비자", "NYSE:V|1D"],
-  ],
-  chartOnly: false,
-  chartType: "area",
-  showVolume: false,
-  showMA: false,
+export const marketOverviewConfig = {
+  dateRange: "12M",
+  showChart: true,
+  showSymbolLogo: true,
+  showFloatingTooltip: false,
   isTransparent: true,
   width: "100%",
   height: "100%",
-  dateRanges: ["1d|1", "1m|30", "3m|60", "12m|1D", "60m|1W", "all|1M"],
+  tabs: [
+    {
+      title: "미국 주요주식",
+      symbols: [
+        { s: "NASDAQ:TSLA", d: "테슬라" },
+        { s: "NASDAQ:NVDA", d: "엔비디아" },
+        { s: "NASDAQ:AAPL", d: "애플" },
+        { s: "NASDAQ:MSFT", d: "마이크로소프트" },
+        { s: "NASDAQ:GOOGL", d: "구글" },
+        { s: "NASDAQ:PLTR", d: "팔란티어" },
+        { s: "NASDAQ:AVGO", d: "브로드컴" },
+        { s: "NYSE:V", d: "비자" },
+      ],
+    },
+  ],
 };
 
 export function advancedChartConfig(symbol: string) {
