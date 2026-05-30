@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { MacroDashboard } from "@/components/dashboard/macro-dashboard";
+import { MarketTab } from "@/components/dashboard/tradingview/market-tab";
 
 type TabKey = "macro" | "market";
 
@@ -30,11 +31,7 @@ export function DashboardTabs() {
       </TabsContent>
 
       <TabsContent value="market" keepMounted className="mt-6">
-        {marketOpened && (
-          <div className="py-10 text-center text-sm text-muted-foreground">
-            실시간 마켓 (준비 중)
-          </div>
-        )}
+        {marketOpened && <MarketTab />}
       </TabsContent>
     </Tabs>
   );
