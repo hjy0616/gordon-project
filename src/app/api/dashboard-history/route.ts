@@ -81,6 +81,18 @@ const FRED_SPECS: FredSpec[] = [
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// FRED 429-throttles bursts: even 4 concurrent requests get rate-limited (same failure mode
+// as the /api/fred snapshot route). So FRED history is fetched sequentially with spacing and
+// 429/5xx retries. Spacing has headroom over the measured ~250ms threshold; the retry is the
+// load-bearing defense against bursts that collide ACROSS serverless invocations sharing one key.
+const FRED_REQUEST_SPACING_MS = 300;
+const FRED_MAX_ATTEMPTS = 3;
+const FRED_BASE_BACKOFF_MS = 300;
+// Never honor a huge Retry-After — a 60s value would blow the function time budget.
+const FRED_MAX_RETRY_AFTER_MS = 1500;
+// Soft cap on the FRED block so retries/spacing can't push it past the platform timeout.
+const FRED_DEADLINE_MS = 8000;
+
 function emptySeries(
   spec: { id: string; name: string; unit: DashboardHistoryUnit },
   source: DashboardHistorySource,
@@ -225,11 +237,16 @@ interface FredObservationsResponse {
 // 짧은 range(1m/3m)에서 sparkline에 점이 충분히 나오도록 client cutoff은 별도로 적용한다.
 const FRED_LOOKBACK_DAYS_FLOOR = 730;
 
+type FredOnceResult =
+  | { kind: "ok"; json: FredObservationsResponse | null }
+  | { kind: "retry"; retryAfterMs: number | null }
+  | { kind: "fail" };
+
 async function fetchFredOnce(
   id: string,
   apiKey: string,
   range: DashboardHistoryRange,
-): Promise<FredObservationsResponse | null | "retry"> {
+): Promise<FredOnceResult> {
   const lookbackDays = Math.max(RANGE_DAYS[range], FRED_LOOKBACK_DAYS_FLOOR);
   const startDate = new Date(
     Date.now() - lookbackDays * 24 * 60 * 60 * 1000,
@@ -242,29 +259,45 @@ async function fetchFredOnce(
     `&observation_start=${startDate}&sort_order=asc`;
 
   const res = await fetch(url, { cache: "no-store" }).catch(() => null);
-  if (!res) return "retry";
-  if (res.status >= 500) return "retry";
-  if (!res.ok) return null;
+  if (!res) return { kind: "retry", retryAfterMs: null }; // network blip — transient
+  // 429 (rate limit) + 5xx (overload) are transient → retry with backoff.
+  // Other non-ok (e.g. 400 bad series, 403 bad key) won't recover → fail fast.
+  if (res.status === 429 || res.status >= 500) {
+    const header = res.headers.get("retry-after");
+    const parsed = header ? Number(header) : NaN;
+    const retryAfterMs =
+      Number.isFinite(parsed) && parsed > 0
+        ? Math.min(parsed * 1000, FRED_MAX_RETRY_AFTER_MS)
+        : null;
+    return { kind: "retry", retryAfterMs };
+  }
+  if (!res.ok) return { kind: "fail" };
 
   const json: FredObservationsResponse | null = await res
     .json()
     .catch(() => null);
-  return json;
+  return { kind: "ok", json };
 }
 
 async function fetchFred(
   spec: FredSpec,
   apiKey: string,
   range: DashboardHistoryRange,
+  allowRetry: boolean,
 ): Promise<DashboardHistorySeries> {
+  const maxAttempts = allowRetry ? FRED_MAX_ATTEMPTS : 1;
   let json: FredObservationsResponse | null = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const result = await fetchFredOnce(spec.id, apiKey, range);
-    if (result !== "retry") {
-      json = result;
+    if (result.kind === "ok") {
+      json = result.json;
       break;
     }
-    if (attempt < 2) await delay(200 * (attempt + 1));
+    if (result.kind === "fail") return emptySeries(spec, "fred");
+    if (attempt >= maxAttempts - 1) return emptySeries(spec, "fred");
+    const backoff = result.retryAfterMs ?? FRED_BASE_BACKOFF_MS * (attempt + 1);
+    // Jitter de-synchronizes retries across concurrent invocations (avoids a thundering herd).
+    await delay(backoff + Math.floor(Math.random() * 150));
   }
   if (!json) return emptySeries(spec, "fred");
 
@@ -380,10 +413,10 @@ function parseRange(input: string | null): DashboardHistoryRange | null {
   return null;
 }
 
-async function computeAll(
+// Yahoo — sequential + 1.5s delay (rate-limit memory). Each fetch .catch-es so the block never rejects.
+async function fetchYahooHistoryBlock(
   range: DashboardHistoryRange,
-): Promise<DashboardHistoryResponse> {
-  // Yahoo — sequential + 1.5s delay (rate-limit memory)
+): Promise<DashboardHistorySeries[]> {
   const yahoo: DashboardHistorySeries[] = [];
   for (let i = 0; i < YAHOO_SPECS.length; i++) {
     const s = await fetchYahoo(YAHOO_SPECS[i], range).catch(() =>
@@ -392,37 +425,49 @@ async function computeAll(
     yahoo.push(s);
     if (i < YAHOO_SPECS.length - 1) await delay(1500);
   }
+  return yahoo;
+}
 
-  // FRED — concurrency 4 (5xx memory)
-  const apiKey = process.env.FRED_API_KEY;
+// FRED — sequential + spacing + 429/5xx retry (FRED throttles bursts). Soft deadline bounds total time.
+async function fetchFredHistoryBlock(
+  range: DashboardHistoryRange,
+  apiKey: string | undefined,
+): Promise<DashboardHistorySeries[]> {
+  if (!apiKey) return FRED_SPECS.map((s) => emptySeries(s, "fred"));
+  const startedAt = Date.now();
   const fred: DashboardHistorySeries[] = [];
-  if (!apiKey) {
-    for (const s of FRED_SPECS) fred.push(emptySeries(s, "fred"));
-  } else {
-    const CONCURRENCY = 4;
-    fred.length = FRED_SPECS.length;
-    for (let i = 0; i < FRED_SPECS.length; i += CONCURRENCY) {
-      const chunk = FRED_SPECS.slice(i, i + CONCURRENCY);
-      const settled = await Promise.allSettled(
-        chunk.map((s) => fetchFred(s, apiKey, range)),
-      );
-      settled.forEach((r, j) => {
-        const idx = i + j;
-        fred[idx] =
-          r.status === "fulfilled"
-            ? r.value
-            : emptySeries(FRED_SPECS[idx], "fred");
-      });
+  for (let i = 0; i < FRED_SPECS.length; i++) {
+    const s = FRED_SPECS[i];
+    const overBudget = Date.now() - startedAt > FRED_DEADLINE_MS;
+    const series = await fetchFred(s, apiKey, range, !overBudget).catch(() =>
+      emptySeries(s, "fred"),
+    );
+    fred.push(series);
+    if (i < FRED_SPECS.length - 1 && !overBudget) {
+      await delay(FRED_REQUEST_SPACING_MS);
     }
   }
+  return fred;
+}
 
-  // Fear & Greed
-  const fg = await fetchFearGreedHistory(range).catch(() =>
-    emptySeries(
-      { id: "fear-greed", name: "Fear & Greed", unit: "rating" },
-      "fear-greed",
+async function computeAll(
+  range: DashboardHistoryRange,
+): Promise<DashboardHistoryResponse> {
+  // Three independent upstreams (Yahoo / FRED / CNN) — no shared rate limit, so fetch the
+  // blocks concurrently. Each block is internally sequenced to respect its own host's limits.
+  // (Previously additive: Yahoo ~7s THEN FRED — which only fit the budget because FRED 429s
+  //  failed instantly. Now that FRED actually succeeds, parallel keeps wall-time ≈ max ≈ 7s.)
+  const apiKey = process.env.FRED_API_KEY;
+  const [yahoo, fred, fg] = await Promise.all([
+    fetchYahooHistoryBlock(range),
+    fetchFredHistoryBlock(range, apiKey),
+    fetchFearGreedHistory(range).catch(() =>
+      emptySeries(
+        { id: "fear-greed", name: "Fear & Greed", unit: "rating" },
+        "fear-greed",
+      ),
     ),
-  );
+  ]);
 
   // Derived
   const fedBalance = fred.find((s) => s.id === "WALCL");
@@ -500,7 +545,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "invalid range" }, { status: 400 });
   }
 
-  const cacheKey = `cache:dashboard-history:v2:${range}`;
+  const cacheKey = `cache:dashboard-history:v3:${range}`;
   const data = await getCachedJson<DashboardHistoryResponse>(
     cacheKey,
     5 * 60 * 1000,
