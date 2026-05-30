@@ -1,3 +1,5 @@
+"use client";
+
 import { FearGreedSection } from "@/components/dashboard/fear-greed-section";
 import { MarketIndicesSection } from "@/components/dashboard/market-indices-section";
 import { FinancialIndicatorsSection } from "@/components/dashboard/financial-indicators-section";

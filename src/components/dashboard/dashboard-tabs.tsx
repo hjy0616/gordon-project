@@ -14,6 +14,7 @@ export function DashboardTabs() {
     <Tabs
       value={tab}
       onValueChange={(value) => {
+        if (!value) return;
         const next = value as TabKey;
         setTab(next);
         if (next === "market") setMarketOpened(true);
