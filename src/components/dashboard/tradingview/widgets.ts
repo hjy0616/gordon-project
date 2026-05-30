@@ -12,9 +12,9 @@ export const TV_SCRIPTS = {
 
 export const tickerTapeConfig = {
   symbols: [
-    { proName: "FOREXCOM:SPX500", title: "S&P 500" },
+    { proName: "FOREXCOM:SPXUSD", title: "S&P 500" },
     { proName: "FOREXCOM:NSXUSD", title: "Nasdaq 100" },
-    { proName: "FX:EURUSD", title: "EUR/USD" },
+    { proName: "FX_IDC:EURUSD", title: "EUR/USD" },
     { proName: "FX_IDC:USDKRW", title: "USD/KRW" },
   ],
   showSymbolLogo: true,
