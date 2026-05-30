@@ -40,6 +40,8 @@ export function TradingViewWidget({
 
     const widgetDiv = document.createElement("div");
     widgetDiv.className = "tradingview-widget-container__widget";
+    widgetDiv.style.height = "100%";
+    widgetDiv.style.width = "100%";
     container.appendChild(widgetDiv);
 
     const script = document.createElement("script");

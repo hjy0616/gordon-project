@@ -23,7 +23,7 @@ export function MarketTab() {
       <TradingViewWidget
         scriptSrc={TV_SCRIPTS.tickerTape}
         config={tickerTapeConfig}
-        height={46}
+        height={78}
       />
 
       {/* 히트맵 (풀폭) */}
@@ -32,7 +32,7 @@ export function MarketTab() {
         <TradingViewWidget
           scriptSrc={TV_SCRIPTS.stockHeatmap}
           config={stockHeatmapConfig}
-          height={500}
+          height={600}
         />
       </section>
 
@@ -52,7 +52,7 @@ export function MarketTab() {
             <TradingViewWidget
               scriptSrc={TV_SCRIPTS.symbolOverview}
               config={symbolOverviewConfig}
-              height={560}
+              height={600}
             />
           </section>
         </div>
@@ -63,7 +63,7 @@ export function MarketTab() {
             <TradingViewWidget
               scriptSrc={TV_SCRIPTS.advancedChart}
               config={advancedChartConfig(ADVANCED_SYMBOLS.sp500)}
-              height={420}
+              height={480}
             />
           </section>
           <section>
@@ -71,7 +71,7 @@ export function MarketTab() {
             <TradingViewWidget
               scriptSrc={TV_SCRIPTS.advancedChart}
               config={advancedChartConfig(ADVANCED_SYMBOLS.nasdaq)}
-              height={420}
+              height={480}
             />
           </section>
           <section>
@@ -79,7 +79,7 @@ export function MarketTab() {
             <TradingViewWidget
               scriptSrc={TV_SCRIPTS.advancedChart}
               config={advancedChartConfig(ADVANCED_SYMBOLS.vix)}
-              height={420}
+              height={480}
             />
           </section>
         </div>
